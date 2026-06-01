@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 const TIPOS = ["Mobiliario", "Iluminación", "Electrodoméstico", "Decoración"];
 const INVENTARIO: Record<string, { nombre: string; proveedor: string }[]> = {
@@ -196,7 +197,24 @@ export default function Permanente() {
                 <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={2} placeholder="Ej: el anterior estaba deteriorado…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none" />
               </div>
 
-              <button onClick={() => setPaso(4)} disabled={!nuevoNombre} className="w-full py-3 bg-[#1D9E75] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#0F6E56] transition-all">
+              <button onClick={async () => {
+                const { error } = await supabase.from("Registros").insert({
+                    tipo: "permanente",
+                    comunidad: "Fuencarral 29C",
+                    area: "Fuencarral 29C",
+                    espacio: "Salón",
+                    persona: "Sara García",
+                    categoria: tipo,
+                    subcategoria: objetoSeleccionado?.nombre || "",
+                    descripcion: nuevoNombre,
+                    comentario: comentario,
+                    estado: "Hecho",
+                    gasto: nuevoPrecio ? parseFloat(nuevoPrecio.replace("€","").trim()) : null,
+                    fecha_creacion: new Date().toISOString(),
+                });
+                if (!error) setPaso(4);
+                else console.error(error);
+            }} disabled={!nuevoNombre} className="w-full py-3 bg-[#1D9E75] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#0F6E56] transition-all">
                 Guardar cambio
               </button>
             </>
