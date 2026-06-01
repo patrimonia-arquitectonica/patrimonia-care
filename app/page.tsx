@@ -110,8 +110,8 @@ export default function Home() {
 
         {/* Tab bar */}
         <div className="border-t border-gray-100 grid grid-cols-4">
-          {[["🟡", "Crea"], ["📅", "Calendario"], ["🕐", "Historial"], ["⚙️", "Maestras"]].map(([icon, label]) => (
-            <button key={label} className={`flex flex-col items-center py-3 gap-1 text-xs ${label === "Crea" ? "text-[#534AB7] font-medium" : "text-gray-400"}`}>
+          {[["🟡", "Crea", "/"], ["📅", "Calendario", "/calendario"], ["🕐", "Historial", "/historial"], ["⚙️", "Maestras", "/maestras"]].map(([icon, label, href]) => (
+            <button key={label} onClick={() => router.push(href)} className={`flex flex-col items-center py-3 gap-1 text-xs ${label === "Crea" ? "text-[#534AB7] font-medium" : "text-gray-400"}`}>
               <span className="text-lg">{icon}</span>
               <span>{label}</span>
             </button>
