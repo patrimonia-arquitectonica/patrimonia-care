@@ -102,7 +102,7 @@ export default function Home() {
             <button className="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-100 transition-all">
               🔔 Crear alerta
             </button>
-            <button onClick={() => router.push("/mantenimiento")} className="w-full px-4 py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
+            <button onClick={() => router.push(tipo === "permanente" ? "/permanente" : "/mantenimiento")} className="w-full px-4 py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
               + Crear registro
             </button>
           </div>
