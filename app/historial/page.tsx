@@ -1,17 +1,26 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
-const REGISTROS = [
-  { id: "MNT-0051", titulo: "Revisar lavadora", comunidad: "Abrantes L1", espacio: "Cocina", persona: "Luis Martín", fecha: "29 may 2026", tipo: "mantenimiento", urgencia: "Media", estado: "Resuelto", gasto: "47,50 €", comentario: "Correa de lavadora desgastada, se sustituyó. Revisar en 3 meses.", subcategoria: "Electrodoméstico" },
-  { id: "PRM-0023", titulo: "Cambio sofá 3 plazas", comunidad: "Fuencarral 29C", espacio: "Salón", persona: "Sara García", fecha: "20 may 2026", tipo: "permanente", urgencia: null, estado: "Hecho", gasto: "650 €", comentario: "Sofá anterior deteriorado, sustituido por esquinero Westwing.", subcategoria: "Mobiliario" },
-  { id: "MNT-0047", titulo: "Humedad en baño", comunidad: "Viñuelas L3", espacio: "Baño", persona: "Sara García", fecha: "28 may 2026", tipo: "mantenimiento", urgencia: "Alta", estado: "Pendiente", gasto: null, comentario: "Humedad visible en techo, revisar junta de ducha.", subcategoria: "Fontanería" },
-  { id: "MNT-0039", titulo: "Pintura salón", comunidad: "Olvido L2", espacio: "Salón", persona: "Ana Molina", fecha: "15 may 2026", tipo: "mantenimiento", urgencia: "Leve", estado: "Resuelto", gasto: "120 €", comentario: "", subcategoria: "Albañilería" },
-  { id: "PRM-0019", titulo: "Cambio cortinas salón", comunidad: "Fuencarral 29C", espacio: "Salón", persona: "Ana Molina", fecha: "10 may 2026", tipo: "permanente", urgencia: null, estado: "Hecho", gasto: "85 €", comentario: "", subcategoria: "Decoración" },
-  { id: "MNT-0033", titulo: "Grifo cocina", comunidad: "Abrantes L2", espacio: "Cocina", persona: "Pedro Ruiz", fecha: "5 may 2026", tipo: "mantenimiento", urgencia: "Media", estado: "Resuelto", gasto: "95 €", comentario: "Grifo monomando sustituido.", subcategoria: "Fontanería" },
-];
 
 export default function Historial() {
+
+  const [REGISTROS, setREGISTROS] = useState<any[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const cargar = async () => {
+        const { data, error } = await supabase
+            .from("Registros")
+            .select("*")
+            .order("fecha_creacion", { ascending: false });
+        if (data) setREGISTROS(data);
+        setCargando(false);
+    };
+    cargar();
+  }, []);
+
   const router = useRouter();
   const [vista, setVista] = useState<"filtros" | "resultados" | "detalle">("filtros");
   const [filtroTipo, setFiltroTipo] = useState("Todos");
@@ -34,6 +43,12 @@ export default function Historial() {
     return null;
   };
 
+  if (cargando) return (
+  <div className="min-h-screen bg-[#F5F4F0] flex items-center justify-center">
+    <p className="text-gray-400 text-sm">Cargando registros...</p>
+  </div>
+  );
+
   // Vista detalle
   if (vista === "detalle" && registroSeleccionado) {
     const r = registroSeleccionado;
@@ -44,7 +59,7 @@ export default function Historial() {
             <button onClick={() => setVista("resultados")} className="text-gray-400 text-lg">←</button>
             <div className="flex-1">
               <h1 className="text-base font-semibold text-gray-900">Detalle registro</h1>
-              <p className="text-xs text-gray-400">#{r.id}</p>
+              <p className="text-xs text-gray-400">#{r.id.slice(0,8).toUpperCase()}</p>
             </div>
             {badgeEstado(r.estado)}
           </div>
@@ -83,7 +98,7 @@ export default function Historial() {
                 <p className="text-sm text-[#3C3489]">{r.comentario}</p>
               </div>
             )}
-            
+
             {r.estado === "Pendiente" && (
                 <button onClick={() => router.push(r.tipo === "permanente" ? "/permanente" : "/mantenimiento")} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
                     → Crear registro desde esta alerta
@@ -133,10 +148,10 @@ export default function Historial() {
             ) : (
               resultados.map((r) => (
                 <button key={r.id} onClick={() => { setRegistroSeleccionado(r); setVista("detalle"); }} className="w-full text-left bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 hover:border-[#534AB7] transition-all">
-                  <p className={`text-xs font-medium mb-1 ${r.tipo === "mantenimiento" ? "text-[#534AB7]" : "text-[#0F6E56]"}`}>#{r.id}</p>
+                  <p className={`text-xs font-medium mb-1 ${r.tipo === "mantenimiento" ? "text-[#534AB7]" : "text-[#0F6E56]"}`}>#{r.id.slice(0,8).toUpperCase()}</p>
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{r.titulo}</p>
+                      <p className="text-sm font-medium text-gray-800">{r.descripcion || r.titulo || "Sin descripción"}</p>
                       <p className="text-xs text-gray-400">{r.comunidad} · {r.persona} · {r.fecha}</p>
                     </div>
                     {badgeEstado(r.estado)}
