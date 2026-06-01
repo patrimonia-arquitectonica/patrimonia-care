@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function Mantenimiento() {
   const router = useRouter();
@@ -124,7 +125,24 @@ export default function Mantenimiento() {
             <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={2} placeholder="Ej: revisar también la junta de la ducha…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none" />
           </div>
 
-          <button onClick={() => setGuardado(true)} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
+          <button onClick={async () => {
+            const { error } = await supabase.from("Registros").insert({
+                tipo: "mantenimiento",
+                comunidad: "Viñuelas · L3",
+                area: "L3",
+                espacio: "Baño",
+                persona: "Sara García",
+                categoria: categoria,
+                subcategoria: subcategoriaIA || "",
+                descripcion: descripcion,
+                comentario: comentario,
+                estado: "Pendiente",
+                gasto: null,
+                fecha_creacion: new Date().toISOString(),
+             });
+            if (!error) setGuardado(true);
+            else console.error(error);
+        }} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
             Guardar registro
           </button>
         </div>
