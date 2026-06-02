@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -16,17 +16,35 @@ function MantenimientoInner() {
   const [fecha, setFecha] = useState("");
   const [comentario, setComentario] = useState("");
   const [guardado, setGuardado] = useState(false);
+  const [subcategoriaIA, setSubcategoriaIA] = useState<string | null>(null);
+  const [cargandoIA, setCargandoIA] = useState(false);
+  const [subcategoriaConfirmada, setSubcategoriaConfirmada] = useState(false);
+  const [subcategoriaEditando, setSubcategoriaEditando] = useState(false);
+  const [subcategoriaManual, setSubcategoriaManual] = useState("");
 
   const CATEGORIAS = ["Albañilería", "Carpintería", "Fontanería", "Limpieza", "Electricidad"];
 
-  const subcategoriaIA = descripcion.length > 10
-    ? descripcion.toLowerCase().includes("goter") || descripcion.toLowerCase().includes("agua") ? "Desagües y fugas"
-    : descripcion.toLowerCase().includes("luz") || descripcion.toLowerCase().includes("enchufe") ? "Instalación eléctrica"
-    : descripcion.toLowerCase().includes("puerta") || descripcion.toLowerCase().includes("ventana") ? "Carpintería interior"
-    : descripcion.toLowerCase().includes("hum") ? "Humedades"
-    : descripcion.toLowerCase().includes("pint") ? "Pintura y acabados"
-    : "Revisión general"
-    : null;
+  useEffect(() => {
+    if (descripcion.length < 15) { setSubcategoriaIA(null); setSubcategoriaConfirmada(false); return; }
+    const timer = setTimeout(async () => {
+      setCargandoIA(true);
+      try {
+        const res = await fetch("/api/ia", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ descripcion, categoria }),
+        });
+        const data = await res.json();
+        setSubcategoriaIA(data.subcategoria);
+        setSubcategoriaConfirmada(false);
+        setSubcategoriaEditando(false);
+      } catch (e) {
+        console.error(e);
+      }
+      setCargandoIA(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [descripcion, categoria]);
 
   if (guardado) {
     return (
@@ -84,19 +102,48 @@ function MantenimientoInner() {
             <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={2} placeholder="Ej: hay una gotera en el techo del baño…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none" />
           </div>
 
-          {subcategoriaIA && (
+          {cargandoIA && (
+            <div className="border border-[#AFA9EC] rounded-2xl p-3 text-xs text-[#534AB7]">
+              ✨ Analizando descripción...
+            </div>
+          )}
+
+          {subcategoriaIA && !cargandoIA && (
             <div className="border border-[#AFA9EC] rounded-2xl p-3">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-sm">✨</span>
                 <span className="text-xs font-semibold text-[#534AB7] uppercase tracking-widest">Subcategoría sugerida por IA</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-[#3C3489] bg-[#EEEDFE] px-3 py-1 rounded-full border border-[#AFA9EC]">{subcategoriaIA}</span>
+              {subcategoriaEditando ? (
                 <div className="flex gap-2">
-                  <button className="text-xs px-3 py-1 rounded-lg bg-[#E1F5EE] border border-[#5DCAA5] text-[#0F6E56]">✓ Confirmar</button>
-                  <button className="text-xs px-3 py-1 rounded-lg bg-gray-50 border border-gray-200 text-gray-500">✎ Cambiar</button>
+                  <input
+                    type="text"
+                    value={subcategoriaManual}
+                    onChange={(e) => setSubcategoriaManual(e.target.value)}
+                    placeholder="Escribe la subcategoría…"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700"
+                  />
+                  <button onClick={() => {
+                    if (subcategoriaManual) {
+                      setSubcategoriaIA(subcategoriaManual);
+                      setSubcategoriaConfirmada(true);
+                      setSubcategoriaEditando(false);
+                    }
+                  }} className="text-xs px-3 py-2 rounded-xl bg-[#E1F5EE] border border-[#5DCAA5] text-[#0F6E56]">✓</button>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className={`text-sm font-medium px-3 py-1 rounded-full border ${subcategoriaConfirmada ? "bg-[#E1F5EE] border-[#5DCAA5] text-[#0F6E56]" : "bg-[#EEEDFE] border-[#AFA9EC] text-[#3C3489]"}`}>
+                    {subcategoriaConfirmada ? "✓ " : ""}{subcategoriaIA}
+                  </span>
+                  {!subcategoriaConfirmada && (
+                    <div className="flex gap-2">
+                      <button onClick={() => setSubcategoriaConfirmada(true)} className="text-xs px-3 py-1 rounded-lg bg-[#E1F5EE] border border-[#5DCAA5] text-[#0F6E56]">✓ Confirmar</button>
+                      <button onClick={() => { setSubcategoriaEditando(true); setSubcategoriaManual(subcategoriaIA || ""); }} className="text-xs px-3 py-1 rounded-lg bg-gray-50 border border-gray-200 text-gray-500">✎ Cambiar</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
