@@ -23,6 +23,8 @@ function MantenimientoInner() {
   const [subcategoriaManual, setSubcategoriaManual] = useState("");
   const [protocolo, setProtocolo] = useState<{ pasos: string[]; materiales: string[] } | null>(null);
   const [pasosCompletados, setPasosCompletados] = useState<boolean[]>([]);
+  const [foto, setFoto] = useState<File | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
 
   const CATEGORIAS = ["Albañilería", "Carpintería", "Fontanería", "Limpieza", "Electricidad"];
 
@@ -203,9 +205,26 @@ function MantenimientoInner() {
           <div>
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Factura / ticket</label>
             <div className="grid grid-cols-2 gap-2 mb-2">
-              <button className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500">📷<span>Foto ticket</span></button>
-              <button className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500">📄<span>Subir PDF</span></button>
+              <label className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 cursor-pointer">
+                📷<span>Foto ticket</span>
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
+                  if (e.target.files?.[0]) setFoto(e.target.files[0]);
+                }} />
+              </label>
+              <label className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 cursor-pointer">
+                📄<span>Subir PDF</span>
+                <input type="file" accept=".pdf" className="hidden" onChange={(e) => {
+                  if (e.target.files?.[0]) setFoto(e.target.files[0]);
+                }} />
+              </label>
             </div>
+            {foto && (
+              <div className="flex items-center gap-2 bg-[#EEEDFE] border border-[#AFA9EC] rounded-xl px-3 py-2 mb-2">
+                <span className="text-sm">📎</span>
+                <span className="text-xs text-[#3C3489] flex-1 truncate">{foto.name}</span>
+                <button onClick={() => setFoto(null)} className="text-xs text-gray-400">✕</button>
+              </div>
+            )}
             <div className="flex items-center gap-2 bg-[#E1F5EE] border border-[#5DCAA5] rounded-xl px-3 py-2">
               <span className="text-sm">📧</span>
               <span className="text-xs text-[#085041]">Se enviará a facturas@patrimoniacare.com</span>
@@ -218,6 +237,19 @@ function MantenimientoInner() {
           </div>
 
           <button onClick={async () => {
+            setSubiendo(true);
+            const ref = `MNT-${Date.now()}`;
+
+            // Subir foto si hay
+            if (foto) {
+              const fd = new FormData();
+              fd.append("file", foto);
+              fd.append("bucket", "facturas");
+              fd.append("ref", ref);
+              await fetch("/api/upload", { method: "POST", body: fd });
+            }
+
+            // Guardar en Supabase
             const { error } = await supabase.from("Registros").insert({
               tipo: "mantenimiento",
               comunidad: `${comunidad}${area ? ` · ${area}` : ""}`,
@@ -232,10 +264,28 @@ function MantenimientoInner() {
               gasto: null,
               fecha_creacion: new Date().toISOString(),
             });
-            if (!error) setGuardado(true);
-            else console.error(error);
-          }} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
-            Guardar registro
+
+            // Enviar email
+            if (!error) {
+              await fetch("/api/email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  ref,
+                  persona: miembro,
+                  comunidad: `${comunidad}${area ? ` · ${area}` : ""}`,
+                  espacio,
+                  descripcion,
+                  tipo: "Mantenimiento",
+                }),
+              });
+              setGuardado(true);
+            } else {
+              console.error(error);
+            }
+            setSubiendo(false);
+          }} disabled={subiendo} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all disabled:opacity-40">
+            {subiendo ? "Guardando..." : "Guardar registro"}
           </button>
         </div>
       </div>
