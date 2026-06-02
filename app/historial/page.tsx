@@ -3,20 +3,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-
 export default function Historial() {
-
   const [REGISTROS, setREGISTROS] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     const cargar = async () => {
-        const { data, error } = await supabase
-            .from("Registros")
-            .select("*")
-            .order("fecha_creacion", { ascending: false });
-        if (data) setREGISTROS(data);
-        setCargando(false);
+      const { data } = await supabase
+        .from("Registros")
+        .select("*")
+        .order("fecha_creacion", { ascending: false });
+      if (data) setREGISTROS(data);
+      setCargando(false);
     };
     cargar();
   }, []);
@@ -27,13 +25,16 @@ export default function Historial() {
   const [filtroComunidad, setFiltroComunidad] = useState("Todas");
   const [filtroEstado, setFiltroEstado] = useState("Todos");
   const [busqueda, setBusqueda] = useState("");
-  const [registroSeleccionado, setRegistroSeleccionado] = useState<typeof REGISTROS[0] | null>(null);
+  const [registroSeleccionado, setRegistroSeleccionado] = useState<any | null>(null);
+  const [buscandoIA, setBuscandoIA] = useState(false);
+  const [idsIA, setIdsIA] = useState<string[] | null>(null);
 
   const resultados = REGISTROS.filter((r) => {
+    if (idsIA) return idsIA.includes(r.id);
     if (filtroTipo !== "Todos" && r.tipo !== filtroTipo.toLowerCase()) return false;
     if (filtroComunidad !== "Todas" && !r.comunidad.includes(filtroComunidad)) return false;
     if (filtroEstado !== "Todos" && r.estado !== filtroEstado) return false;
-    if (busqueda && !r.titulo.toLowerCase().includes(busqueda.toLowerCase()) && !r.id.toLowerCase().includes(busqueda.toLowerCase())) return false;
+    if (busqueda && !r.descripcion?.toLowerCase().includes(busqueda.toLowerCase()) && !r.id.toLowerCase().includes(busqueda.toLowerCase())) return false;
     return true;
   });
 
@@ -44,9 +45,9 @@ export default function Historial() {
   };
 
   if (cargando) return (
-  <div className="min-h-screen bg-[#F5F4F0] flex items-center justify-center">
-    <p className="text-gray-400 text-sm">Cargando registros...</p>
-  </div>
+    <div className="min-h-screen bg-[#F5F4F0] flex items-center justify-center">
+      <p className="text-gray-400 text-sm">Cargando registros...</p>
+    </div>
   );
 
   // Vista detalle
@@ -70,7 +71,7 @@ export default function Historial() {
                 ["Comunidad", r.comunidad],
                 ["Espacio", r.espacio],
                 ["Categoría", r.subcategoria],
-                ["Fecha", r.fecha],
+                ["Fecha", r.fecha_creacion ? new Date(r.fecha_creacion).toLocaleDateString("es-ES") : "—"],
                 ["Tipo", r.tipo === "mantenimiento" ? "🔧 Mantenimiento" : "🪑 Permanente"],
               ].map(([lbl, val]) => (
                 <div key={lbl} className="flex justify-between text-sm border-b border-gray-100 pb-2 last:border-0 last:pb-0">
@@ -84,7 +85,7 @@ export default function Historial() {
               <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
                 <div>
                   <p className="text-xs text-gray-400">Gasto registrado</p>
-                  <p className="text-base font-semibold text-gray-900">{r.gasto}</p>
+                  <p className="text-base font-semibold text-gray-900">{r.gasto} €</p>
                 </div>
                 <button className="flex items-center gap-1 bg-[#E1F5EE] border border-[#5DCAA5] rounded-xl px-3 py-2 text-xs text-[#085041]">
                   🧾 Ver factura
@@ -100,9 +101,9 @@ export default function Historial() {
             )}
 
             {r.estado === "Pendiente" && (
-                <button onClick={() => router.push(r.tipo === "permanente" ? "/permanente" : "/mantenimiento")} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
-                    → Crear registro desde esta alerta
-                </button>
+              <button onClick={() => router.push(r.tipo === "permanente" ? "/permanente" : "/mantenimiento")} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
+                → Crear registro desde esta alerta
+              </button>
             )}
 
             <button className="w-full py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">
@@ -129,19 +130,19 @@ export default function Historial() {
       <div className="min-h-screen bg-[#F5F4F0] flex flex-col items-center justify-start p-4">
         <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm overflow-hidden">
           <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center gap-3">
-            <button onClick={() => setVista("filtros")} className="text-gray-400 text-lg">←</button>
+            <button onClick={() => { setVista("filtros"); setIdsIA(null); }} className="text-gray-400 text-lg">←</button>
             <div className="flex-1">
               <h1 className="text-base font-semibold text-gray-900">Resultados</h1>
-              <p className="text-xs text-gray-400">{resultados.length} registros</p>
+              <p className="text-xs text-gray-400">{resultados.length} registros{idsIA ? " · búsqueda IA ✨" : ""}</p>
             </div>
-            <button onClick={() => setVista("filtros")} className="text-xs text-[#534AB7]">⚙ Filtros</button>
+            <button onClick={() => { setVista("filtros"); setIdsIA(null); }} className="text-xs text-[#534AB7]">⚙ Filtros</button>
           </div>
           <div className="px-5 py-4 space-y-2">
-            {/* Filtros activos */}
             <div className="flex gap-2 flex-wrap mb-2">
-              {filtroTipo !== "Todos" && <span className="text-xs px-3 py-1 rounded-full bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489]">{filtroTipo} ×</span>}
-              {filtroComunidad !== "Todas" && <span className="text-xs px-3 py-1 rounded-full bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489]">{filtroComunidad} ×</span>}
-              {filtroEstado !== "Todos" && <span className="text-xs px-3 py-1 rounded-full bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489]">{filtroEstado} ×</span>}
+              {filtroTipo !== "Todos" && !idsIA && <span className="text-xs px-3 py-1 rounded-full bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489]">{filtroTipo} ×</span>}
+              {filtroComunidad !== "Todas" && !idsIA && <span className="text-xs px-3 py-1 rounded-full bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489]">{filtroComunidad} ×</span>}
+              {filtroEstado !== "Todos" && !idsIA && <span className="text-xs px-3 py-1 rounded-full bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489]">{filtroEstado} ×</span>}
+              {idsIA && <span className="text-xs px-3 py-1 rounded-full bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489]">✨ "{busqueda}"</span>}
             </div>
             {resultados.length === 0 ? (
               <p className="text-center text-gray-400 text-sm py-8">No hay registros con estos filtros</p>
@@ -151,8 +152,8 @@ export default function Historial() {
                   <p className={`text-xs font-medium mb-1 ${r.tipo === "mantenimiento" ? "text-[#534AB7]" : "text-[#0F6E56]"}`}>#{r.id.slice(0,8).toUpperCase()}</p>
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{r.descripcion || r.titulo || "Sin descripción"}</p>
-                      <p className="text-xs text-gray-400">{r.comunidad} · {r.persona} · {r.fecha}</p>
+                      <p className="text-sm font-medium text-gray-800">{r.descripcion || "Sin descripción"}</p>
+                      <p className="text-xs text-gray-400">{r.comunidad} · {r.persona}</p>
                     </div>
                     {badgeEstado(r.estado)}
                   </div>
@@ -179,10 +180,38 @@ export default function Historial() {
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm overflow-hidden">
         <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex justify-between items-center">
           <h1 className="text-lg font-semibold text-gray-900">Buscar en historial</h1>
-          <button onClick={() => { setFiltroTipo("Todos"); setFiltroComunidad("Todas"); setFiltroEstado("Todos"); setBusqueda(""); }} className="text-xs text-gray-400">Limpiar</button>
+          <button onClick={() => { setFiltroTipo("Todos"); setFiltroComunidad("Todas"); setFiltroEstado("Todos"); setBusqueda(""); setIdsIA(null); }} className="text-xs text-gray-400">Limpiar</button>
         </div>
         <div className="px-5 py-5 space-y-4">
-          <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Ref. #MNT-0047, palabra clave…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700" />
+          <div>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => { setBusqueda(e.target.value); setIdsIA(null); }}
+              placeholder="Busca cualquier cosa: 'el problema del baño de viñuelas'…"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700"
+            />
+            {busqueda.length > 10 && (
+              <button onClick={async () => {
+                setBuscandoIA(true);
+                try {
+                  const res = await fetch("/api/busqueda", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ consulta: busqueda, registros: REGISTROS }),
+                  });
+                  const data = await res.json();
+                  setIdsIA(data.ids);
+                  setVista("resultados");
+                } catch (e) {
+                  console.error(e);
+                }
+                setBuscandoIA(false);
+              }} className="w-full mt-2 py-2 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
+                {buscandoIA ? "✨ Buscando con IA..." : "✨ Buscar con IA"}
+              </button>
+            )}
+          </div>
 
           <div>
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">Tipo</label>
