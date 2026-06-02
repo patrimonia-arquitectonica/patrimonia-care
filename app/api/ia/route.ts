@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     messages: [
       {
         role: "user",
-        content: `Eres un asistente de gestión de inmuebles. Dado este mantenimiento de categoría "${categoria}", con la descripción: "${descripcion}", elige la subcategoría más adecuada de esta lista: ${subcategorias.length > 0 ? subcategorias.join(", ") : "Revisión general"}. Responde SOLO con el nombre exacto de la subcategoría, sin explicaciones ni puntos.`,
+        content: `Eres un asistente de gestión de inmuebles. Dado este mantenimiento de categoría "${categoria}", con la descripción: "${descripcion}", elige la subcategoría más adecuada de esta lista y responde ÚNICAMENTE con el texto exacto de una de estas opciones, sin cambiar ni una letra: ${subcategorias.length > 0 ? subcategorias.join(" | ") : "Revisión general"}`,
       },
     ],
   });
