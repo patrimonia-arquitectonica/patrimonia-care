@@ -102,11 +102,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="space-y-2 pt-1">
-            <button className="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-100 transition-all">
-              🕐 Cotillear historial
-            </button>
-            <button className="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-100 transition-all">
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button onClick={() => {
+              const params = new URLSearchParams({
+                miembro: miembro || "",
+                comunidad: comunidad || "",
+                area: area || "",
+                espacio: espacio || "",
+              });
+              router.push(`/alerta?${params.toString()}`);
+            }} className="w-full px-4 py-3 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold hover:bg-[#F5E0C0] transition-all">
               🔔 Crear alerta
             </button>
             <button onClick={() => {
