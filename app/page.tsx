@@ -1,35 +1,49 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const MIEMBROS = ["Sara García", "Luis Martín", "Ana Molina", "Pedro Ruiz"];
-const COMUNIDADES = [
-  { nombre: "Pico Peña", pisos: ["L2", "L4"], zonas: true },
-  { nombre: "Centro", pisos: ["Fuencarral 29C", "Gracia 18"], zonas: false },
-  { nombre: "Viñuelas", pisos: ["L1","L2","L3","L4","L5","L6","L7"], zonas: true },
-  { nombre: "Abrantes", pisos: ["L1", "L2"], zonas: true },
-  { nombre: "Olvido", pisos: ["L1", "L2"], zonas: true },
-  { nombre: "Leoncio", pisos: ["DR1", "DR2", "DR4"], zonas: true },
-];
-const ESPACIOS = ["General", "Baño", "Cocina", "Salón", "Dormitorio", "Terraza", "Patio"];
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const router = useRouter();
+  const [miembros, setMiembros] = useState<any[]>([]);
+  const [comunidades, setComunidades] = useState<any[]>([]);
+  const [espacios, setEspacios] = useState<any[]>([]);
   const [miembro, setMiembro] = useState("");
   const [comunidad, setComunidad] = useState("");
   const [area, setArea] = useState("");
   const [espacio, setEspacio] = useState("");
   const [tipo, setTipo] = useState<"mantenimiento" | "permanente">("mantenimiento");
+  const [cargando, setCargando] = useState(true);
 
-  const comunidadObj = COMUNIDADES.find((c) => c.nombre === comunidad);
+  useEffect(() => {
+    const cargar = async () => {
+      const [{ data: m }, { data: c }, { data: e }] = await Promise.all([
+        supabase.from("miembros").select("*").order("nombre"),
+        supabase.from("comunidades").select("*").order("nombre"),
+        supabase.from("espacios").select("*").order("nombre"),
+      ]);
+      if (m) setMiembros(m);
+      if (c) setComunidades(c);
+      if (e) setEspacios(e);
+      setCargando(false);
+    };
+    cargar();
+  }, []);
+
+  const comunidadObj = comunidades.find((c) => c.nombre === comunidad);
   const areaOpciones = comunidadObj
-    ? [...(comunidadObj.zonas ? ["Zonas comunes"] : []), ...comunidadObj.pisos]
+    ? [...(comunidadObj.zonas_comunes ? ["Zonas comunes"] : []), ...(comunidadObj.pisos || [])]
     : [];
+
+  if (cargando) return (
+    <div className="min-h-screen bg-[#F5F4F0] flex items-center justify-center">
+      <p className="text-gray-400 text-sm">Cargando...</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#F5F4F0] flex flex-col items-center justify-start p-4">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm overflow-hidden">
-        {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex justify-between items-start">
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Patrimonia Care</h1>
@@ -38,50 +52,44 @@ export default function Home() {
           <button className="text-gray-400 hover:text-gray-600">🔔</button>
         </div>
 
-        {/* Contenido */}
         <div className="px-5 py-5 space-y-4">
           <div>
             <p className="text-xl font-semibold text-gray-900">¡Holaaaaa,</p>
             <p className="text-sm text-gray-400">¿quién eres y dónde estás hoy?</p>
           </div>
 
-          {/* Quién */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">¿Quién eres?</label>
             <select value={miembro} onChange={(e) => setMiembro(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none">
               <option value="">Selecciona un miembro</option>
-              {MIEMBROS.map((m) => <option key={m}>{m}</option>)}
+              {miembros.map((m) => <option key={m.id} value={m.nombre}>{m.nombre} — {m.rol}</option>)}
             </select>
           </div>
 
-          {/* Comunidad */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">¿En qué comunidad?</label>
             <select value={comunidad} onChange={(e) => { setComunidad(e.target.value); setArea(""); }} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none">
               <option value="">Elige comunidad</option>
-              {COMUNIDADES.map((c) => <option key={c.nombre}>{c.nombre}</option>)}
+              {comunidades.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}{c.prime ? " ✦" : ""}</option>)}
             </select>
           </div>
 
-          {/* Área */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">¿En qué área?</label>
             <select value={area} onChange={(e) => setArea(e.target.value)} disabled={!comunidad} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none disabled:opacity-40">
               <option value="">Zonas comunes / piso concreto</option>
-              {areaOpciones.map((a) => <option key={a}>{a}</option>)}
+              {areaOpciones.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
 
-          {/* Espacio */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">¿En qué espacio?</label>
             <select value={espacio} onChange={(e) => setEspacio(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none">
               <option value="">General, baño, cocina…</option>
-              {ESPACIOS.map((e) => <option key={e}>{e}</option>)}
+              {espacios.map((e) => <option key={e.id} value={e.nombre}>{e.nombre}</option>)}
             </select>
           </div>
 
-          {/* Tipo */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">¿Qué vas a hacer?</label>
             <div className="grid grid-cols-2 gap-2">
@@ -94,7 +102,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Acciones */}
           <div className="space-y-2 pt-1">
             <button className="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-100 transition-all">
               🕐 Cotillear historial
@@ -102,13 +109,20 @@ export default function Home() {
             <button className="w-full flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-100 transition-all">
               🔔 Crear alerta
             </button>
-            <button onClick={() => router.push(tipo === "permanente" ? "/permanente" : "/mantenimiento")} className="w-full px-4 py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
+            <button onClick={() => {
+              const params = new URLSearchParams({
+                miembro: miembro || "",
+                comunidad: comunidad || "",
+                area: area || "",
+                espacio: espacio || "",
+              });
+              router.push(`${tipo === "permanente" ? "/permanente" : "/mantenimiento"}?${params.toString()}`);
+            }} className="w-full px-4 py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold hover:bg-[#3C3489] transition-all">
               + Crear registro
             </button>
           </div>
         </div>
 
-        {/* Tab bar */}
         <div className="border-t border-gray-100 grid grid-cols-4">
           {[["🟡", "Crea", "/"], ["📅", "Calendario", "/calendario"], ["🕐", "Historial", "/historial"], ["⚙️", "Maestras", "/maestras"]].map(([icon, label, href]) => (
             <button key={label} onClick={() => router.push(href)} className={`flex flex-col items-center py-3 gap-1 text-xs ${label === "Crea" ? "text-[#534AB7] font-medium" : "text-gray-400"}`}>
