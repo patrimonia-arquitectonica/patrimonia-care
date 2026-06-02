@@ -71,7 +71,7 @@ export default function Historial() {
                 ["Comunidad", r.comunidad],
                 ["Espacio", r.espacio],
                 ["Categoría", r.subcategoria],
-                ["Fecha", r.fecha_creacion ? new Date(r.fecha_creacion).toLocaleDateString("es-ES") : "—"],
+                ["Fecha", r.fecha_creacion ? new Date(r.fecha_creacion).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"],
                 ["Tipo", r.tipo === "mantenimiento" ? "🔧 Mantenimiento" : "🪑 Permanente"],
               ].map(([lbl, val]) => (
                 <div key={lbl} className="flex justify-between text-sm border-b border-gray-100 pb-2 last:border-0 last:pb-0">
