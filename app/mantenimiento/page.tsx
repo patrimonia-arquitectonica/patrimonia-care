@@ -21,6 +21,8 @@ function MantenimientoInner() {
   const [subcategoriaConfirmada, setSubcategoriaConfirmada] = useState(false);
   const [subcategoriaEditando, setSubcategoriaEditando] = useState(false);
   const [subcategoriaManual, setSubcategoriaManual] = useState("");
+  const [protocolo, setProtocolo] = useState<{ pasos: string[]; materiales: string[] } | null>(null);
+  const [pasosCompletados, setPasosCompletados] = useState<boolean[]>([]);
 
   const CATEGORIAS = ["Albañilería", "Carpintería", "Fontanería", "Limpieza", "Electricidad"];
 
@@ -45,6 +47,24 @@ function MantenimientoInner() {
     }, 800);
     return () => clearTimeout(timer);
   }, [descripcion, categoria]);
+
+  useEffect(() => {
+    if (!subcategoriaIA) { setProtocolo(null); setPasosCompletados([]); return; }
+    const cargar = async () => {
+      const { data } = await supabase
+        .from("protocolos")
+        .select("*")
+        .eq("subcategoria", subcategoriaIA)
+        .single();
+      if (data) {
+        setProtocolo(data);
+        setPasosCompletados(new Array(data.pasos.length).fill(false));
+      } else {
+        setProtocolo(null);
+      }
+    };
+    cargar();
+  }, [subcategoriaIA]);
 
   if (guardado) {
     return (
@@ -144,6 +164,34 @@ function MantenimientoInner() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {protocolo && (
+            <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">📋 Protocolo de revisión</p>
+              <div className="space-y-2">
+                {protocolo.pasos.map((paso, i) => (
+                  <button key={i} onClick={() => {
+                    const nuevo = [...pasosCompletados];
+                    nuevo[i] = !nuevo[i];
+                    setPasosCompletados(nuevo);
+                  }} className={`w-full flex items-start gap-3 text-left p-2 rounded-xl transition-all ${pasosCompletados[i] ? "bg-[#E1F5EE]" : "bg-white border border-gray-100"}`}>
+                    <span className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 flex items-center justify-center text-xs border ${pasosCompletados[i] ? "bg-[#1D9E75] border-[#1D9E75] text-white" : "border-gray-300"}`}>
+                      {pasosCompletados[i] ? "✓" : ""}
+                    </span>
+                    <span className={`text-xs ${pasosCompletados[i] ? "line-through text-gray-400" : "text-gray-700"}`}>{paso}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">🛒 Material necesario</p>
+                <div className="flex gap-2 flex-wrap">
+                  {protocolo.materiales.map((m, i) => (
+                    <span key={i} className="text-xs px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-600">{m}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
