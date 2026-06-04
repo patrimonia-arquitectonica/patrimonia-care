@@ -8,8 +8,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Patrimonia Care",
-  description: "Gestión de inmuebles",
+  title: "TidyHome",
+  description: "Your homes, always tidy",
 };
 
 export default function RootLayout({

@@ -20,9 +20,8 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
   return (
     <aside className="w-56 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen sticky top-0">
       {/* Logo */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-        <img src="/logo.png" alt="Patrimonia Care" className="w-8 h-8 object-contain" />
-        <span className="text-sm font-medium text-gray-900">Patrimonia Care</span>
+      <div className="px-4 py-4 border-b border-gray-100">
+        <img src="/logo-tidyhome.svg" alt="TidyHome" className="h-12 w-auto object-contain" />
       </div>
 
       {/* Nav */}
