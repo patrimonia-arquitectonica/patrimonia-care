@@ -1,12 +1,14 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AppLayout from "@/components/AppLayout";
 
 const MIEMBROS_INIT = [
-  { nombre: "Sara García", rol: "Gestora", iniciales: "SG", color: "bg-[#EEEDFE] text-[#3C3489]" },
-  { nombre: "Luis Martín", rol: "Técnico", iniciales: "LM", color: "bg-[#E1F5EE] text-[#085041]" },
-  { nombre: "Ana Molina", rol: "Limpieza", iniciales: "AM", color: "bg-[#FAEEDA] text-[#854F0B]" },
-  { nombre: "Pedro Ruiz", rol: "Gestor", iniciales: "PR", color: "bg-[#FAECE7] text-[#712B13]" },
+  { nombre: "Enrique", rol: "Director", iniciales: "E", color: "bg-[#EEEDFE] text-[#3C3489]" },
+  { nombre: "Tana", rol: "Técnico", iniciales: "T", color: "bg-[#E1F5EE] text-[#085041]" },
+  { nombre: "Alejandro", rol: "Técnico", iniciales: "AJ", color: "bg-[#FAEEDA] text-[#854F0B]" },
+  { nombre: "Fredi", rol: "Técnico", iniciales: "F", color: "bg-[#FAECE7] text-[#712B13]" },
+  { nombre: "Ana", rol: "Datos", iniciales: "A", color: "bg-[#FBEAF0] text-[#72243E]" },
 ];
 
 const COMUNIDADES = [
@@ -32,75 +34,72 @@ export default function Maestras() {
   const [mostrarFormCategoria, setMostrarFormCategoria] = useState(false);
   const [editandoMiembro, setEditandoMiembro] = useState<typeof MIEMBROS_INIT[0] | null>(null);
 
-  // Vista editar miembro
   if (editandoMiembro) {
     return (
-      <div className="min-h-screen bg-[#F5F4F0] flex flex-col items-center justify-start p-4">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center gap-3">
-            <button onClick={() => setEditandoMiembro(null)} className="text-gray-400 text-lg">←</button>
-            <h1 className="text-base font-semibold text-gray-900 flex-1">Editar miembro</h1>
-          </div>
-          <div className="px-5 py-5 space-y-4">
-            <div className="flex flex-col items-center gap-2 mb-2">
-              <div className={`w-14 h-14 rounded-full ${editandoMiembro.color} flex items-center justify-center text-lg font-semibold`}>{editandoMiembro.iniciales}</div>
+      <AppLayout>
+        <div className="p-6 max-w-lg">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center gap-3">
+              <button onClick={() => setEditandoMiembro(null)} className="text-gray-400 text-lg">←</button>
+              <h1 className="text-base font-semibold text-gray-900 flex-1">Editar miembro</h1>
             </div>
-
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Nombre</label>
-              <input type="text" defaultValue={editandoMiembro.nombre} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700" />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">Rol</label>
-              <div className="flex gap-2 flex-wrap">
-                {["Gestor", "Técnico", "Limpieza"].map((r) => (
-                  <button key={r} className={`px-4 py-2 rounded-full text-xs border transition-all ${editandoMiembro.rol === r ? "bg-[#EEEDFE] border-[#534AB7] text-[#3C3489] font-medium" : "bg-gray-50 border-gray-200 text-gray-500"}`}>{r}</button>
-                ))}
+            <div className="px-5 py-5 space-y-4">
+              <div className="flex flex-col items-center gap-2 mb-2">
+                <div className={`w-14 h-14 rounded-full ${editandoMiembro.color} flex items-center justify-center text-lg font-semibold`}>{editandoMiembro.iniciales}</div>
               </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">Comunidades asignadas</label>
-              <div className="flex gap-2 flex-wrap">
-                {COMUNIDADES.map((c) => (
-                  <button key={c.nombre} className="px-3 py-1.5 rounded-full text-xs border bg-gray-50 border-gray-200 text-gray-500">{c.nombre}</button>
-                ))}
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Nombre</label>
+                <input type="text" defaultValue={editandoMiembro.nombre} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700" />
               </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">Rol</label>
+                <div className="flex gap-2 flex-wrap">
+                  {["Director", "Técnico", "Datos"].map((r) => (
+                    <button key={r} className={`px-4 py-2 rounded-full text-xs border transition-all ${editandoMiembro.rol === r ? "bg-[#EEEDFE] border-[#534AB7] text-[#3C3489] font-medium" : "bg-gray-50 border-gray-200 text-gray-500"}`}>{r}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">Comunidades asignadas</label>
+                <div className="flex gap-2 flex-wrap">
+                  {COMUNIDADES.map((c) => (
+                    <button key={c.nombre} className="px-3 py-1.5 rounded-full text-xs border bg-gray-50 border-gray-200 text-gray-500">{c.nombre}</button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => setEditandoMiembro(null)} className="w-full py-3 bg-[#1D9E75] text-white rounded-xl text-sm font-semibold">
+                Guardar cambios
+              </button>
+              <button onClick={() => { setMiembros(miembros.filter((m) => m.nombre !== editandoMiembro.nombre)); setEditandoMiembro(null); }} className="w-full py-3 bg-white border border-[#F09595] text-[#A32D2D] rounded-xl text-sm">
+                Eliminar miembro
+              </button>
             </div>
-
-            <button onClick={() => setEditandoMiembro(null)} className="w-full py-3 bg-[#1D9E75] text-white rounded-xl text-sm font-semibold">
-              Guardar cambios
-            </button>
-            <button onClick={() => { setMiembros(miembros.filter((m) => m.nombre !== editandoMiembro.nombre)); setEditandoMiembro(null); }} className="w-full py-3 bg-white border border-[#F09595] text-[#A32D2D] rounded-xl text-sm">
-              Eliminar miembro
-            </button>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F4F0] flex flex-col items-center justify-start p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm overflow-hidden">
-        <div className="px-5 pt-5 pb-4 border-b border-gray-100">
-          <h1 className="text-lg font-semibold text-gray-900">Listas maestras</h1>
+    <AppLayout>
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-gray-900">Listas maestras</h1>
           <p className="text-sm text-gray-400">Configuración base</p>
         </div>
 
-        <div className="px-5 py-5 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* EQUIPO */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">👥 Equipo</p>
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm font-medium text-gray-900">👥 Equipo</p>
               <button className="text-xs text-[#534AB7] border border-dashed border-[#AFA9EC] px-3 py-1 rounded-full">+ Añadir</button>
             </div>
-            <div className="bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden">
-              {miembros.map((m, i) => (
-                <div key={m.nombre} className={`flex items-center gap-3 px-4 py-3 ${i < miembros.length - 1 ? "border-b border-gray-100" : ""}`}>
-                  <div className={`w-9 h-9 rounded-full ${m.color} flex items-center justify-center text-xs font-semibold flex-shrink-0`}>{m.iniciales}</div>
+            <div className="space-y-1">
+              {miembros.map((m) => (
+                <div key={m.nombre} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-all">
+                  <div className={`w-8 h-8 rounded-full ${m.color} flex items-center justify-center text-xs font-semibold flex-shrink-0`}>{m.iniciales}</div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-800">{m.nombre}</p>
                     <p className="text-xs text-gray-400">{m.rol}</p>
@@ -113,15 +112,15 @@ export default function Maestras() {
           </div>
 
           {/* COMUNIDADES */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">🏢 Comunidades</p>
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm font-medium text-gray-900">🏢 Comunidades</p>
               <button className="text-xs text-[#534AB7] border border-dashed border-[#AFA9EC] px-3 py-1 rounded-full">+ Añadir</button>
             </div>
-            <div className="bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden">
-              {COMUNIDADES.map((c, i) => (
-                <div key={c.nombre} className={`flex items-center gap-3 px-4 py-3 ${i < COMUNIDADES.length - 1 ? "border-b border-gray-100" : ""}`}>
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
+            <div className="space-y-1">
+              {COMUNIDADES.map((c) => (
+                <div key={c.nombre} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-all">
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: c.color }} />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-gray-800">{c.nombre}</p>
@@ -136,13 +135,13 @@ export default function Maestras() {
           </div>
 
           {/* ESPACIOS */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">🚪 Espacios</p>
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm font-medium text-gray-900">🚪 Espacios</p>
               <button onClick={() => setMostrarFormEspacio(!mostrarFormEspacio)} className="text-xs text-[#534AB7] border border-dashed border-[#AFA9EC] px-3 py-1 rounded-full">+ Añadir</button>
             </div>
             {mostrarFormEspacio && (
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2 mb-3">
                 <input type="text" value={nuevoEspacio} onChange={(e) => setNuevoEspacio(e.target.value)} placeholder="Ej: Garaje" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
                 <button onClick={() => { if (nuevoEspacio) { setEspacios([...espacios, nuevoEspacio]); setNuevoEspacio(""); setMostrarFormEspacio(false); } }} className="px-4 py-2 bg-[#534AB7] text-white rounded-xl text-sm">✓</button>
               </div>
@@ -158,13 +157,13 @@ export default function Maestras() {
           </div>
 
           {/* CATEGORÍAS */}
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">🏷️ Categorías</p>
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm font-medium text-gray-900">🏷️ Categorías</p>
               <button onClick={() => setMostrarFormCategoria(!mostrarFormCategoria)} className="text-xs text-[#534AB7] border border-dashed border-[#AFA9EC] px-3 py-1 rounded-full">+ Añadir</button>
             </div>
             {mostrarFormCategoria && (
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2 mb-3">
                 <input type="text" value={nuevaCategoria} onChange={(e) => setNuevaCategoria(e.target.value)} placeholder="Ej: Climatización" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
                 <button onClick={() => { if (nuevaCategoria) { setCategorias([...categorias, nuevaCategoria]); setNuevaCategoria(""); setMostrarFormCategoria(false); } }} className="px-4 py-2 bg-[#534AB7] text-white rounded-xl text-sm">✓</button>
               </div>
@@ -180,17 +179,7 @@ export default function Maestras() {
           </div>
 
         </div>
-
-        {/* Tab bar */}
-        <div className="border-t border-gray-100 grid grid-cols-4">
-          {[["🟡", "Crea", "/"], ["📅", "Calendario", "/calendario"], ["🕐", "Historial", "/historial"], ["⚙️", "Maestras", "/maestras"]].map(([icon, label, href]) => (
-            <button key={label} onClick={() => router.push(href)} className={`flex flex-col items-center py-3 gap-1 text-xs ${label === "Maestras" ? "text-[#534AB7] font-medium" : "text-gray-400"}`}>
-              <span className="text-lg">{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
