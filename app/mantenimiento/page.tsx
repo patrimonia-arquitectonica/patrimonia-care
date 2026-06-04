@@ -68,7 +68,7 @@ function MantenimientoInner() {
             <h2 className="text-lg font-semibold text-gray-900">Registro guardado</h2>
             <div className="w-full bg-gray-50 rounded-2xl p-4 text-left space-y-3 border border-gray-100">
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Acciones realizadas</p>
-              <div className="flex items-center gap-2 text-sm text-gray-700">📅 Próxima revisión añadida al calendario</div>
+              {fecha && <div className="flex items-center gap-2 text-sm text-gray-700">📅 Próxima revisión: {new Date(fecha).toLocaleDateString("es-ES")}</div>}
               <div className="flex items-center gap-2 text-sm text-gray-700">📧 Factura enviada a facturas@patrimoniacare.com</div>
               <div className="flex items-center gap-2 text-sm text-gray-700">🗄️ Registro guardado en historial</div>
             </div>
@@ -207,6 +207,7 @@ function MantenimientoInner() {
                   estado: "Pendiente",
                   gasto: null,
                   foto_url: urlFoto,
+                  fecha_revision: fecha || null,
                   fecha_creacion: new Date().toISOString(),
                 });
                 if (!error) {
