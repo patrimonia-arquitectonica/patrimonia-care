@@ -49,18 +49,22 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
       <div className="border-t border-gray-100 p-3">
         <button
           onClick={() => router.push("/")}
-          className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-all"
+          className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-all ${miembro ? "hover:bg-gray-50" : "bg-[#EEEDFE] hover:bg-[#DDD9FC]"}`}
         >
-          <div className="w-7 h-7 rounded-full bg-[#EEEDFE] flex items-center justify-center text-xs font-medium text-[#534AB7] flex-shrink-0">
-            {miembro ? miembro.slice(0,2).toUpperCase() : "?"}
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${miembro ? "bg-[#EEEDFE] text-[#534AB7]" : "bg-[#534AB7] text-white"}`}>
+            {miembro ? miembro.slice(0,2).toUpperCase() : "👋"}
           </div>
           <div className="flex-1 text-left min-w-0">
-            <p className="text-sm font-medium text-gray-800 truncate">{miembro || "Seleccionar usuario"}</p>
-            <p className="text-xs text-gray-400 truncate">{comunidad || "Sin comunidad"}</p>
+            <p className={`text-sm font-medium truncate ${miembro ? "text-gray-800" : "text-[#534AB7]"}`}>
+            {miembro || "¿Quién eres?"}
+            </p>
+            <p className="text-xs text-gray-400 truncate">
+            {comunidad || "Pulsa para identificarte"}
+            </p>
           </div>
           <i className="ti ti-chevron-up text-gray-300 text-sm" aria-hidden="true"></i>
         </button>
-      </div>
+    </div>
     </aside>
   );
 }

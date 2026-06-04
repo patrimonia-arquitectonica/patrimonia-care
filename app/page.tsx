@@ -26,6 +26,8 @@ export default function Home() {
       if (m) setMiembros(m);
       if (c) setComunidades(c);
       if (e) setEspacios(e);
+      const miembroGuardado = localStorage.getItem("miembro");
+      if (miembroGuardado) setMiembro(miembroGuardado);
       setCargando(false);
     };
     cargar();
@@ -55,7 +57,6 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Columna izquierda — identificación */}
           <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Identifícate</p>
 
@@ -63,7 +64,10 @@ export default function Home() {
               <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">
                 ¿Quién eres? <span className="text-[#E24B4A]">*</span>
               </label>
-              <select value={miembro} onChange={(e) => setMiembro(e.target.value)} className={`w-full bg-gray-50 border rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none ${!miembro ? "border-gray-200" : "border-[#534AB7]"}`}>
+              <select value={miembro} onChange={(e) => {
+                setMiembro(e.target.value);
+                localStorage.setItem("miembro", e.target.value);
+              }} className={`w-full bg-gray-50 border rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none ${!miembro ? "border-gray-200" : "border-[#534AB7]"}`}>
                 <option value="">Selecciona un miembro</option>
                 {miembros.map((m) => <option key={m.id} value={m.nombre}>{m.nombre} — {m.rol}</option>)}
               </select>
@@ -100,7 +104,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Columna derecha — acciones */}
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">¿Qué vas a hacer?</p>

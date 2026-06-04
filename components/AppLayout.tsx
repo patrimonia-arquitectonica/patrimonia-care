@@ -1,11 +1,18 @@
 "use client";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "./Sidebar";
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
-  const miembro = searchParams.get("miembro") || "";
+  const [miembroLocal, setMiembroLocal] = useState("");
+
+  useEffect(() => {
+    const guardado = localStorage.getItem("miembro") || "";
+    setMiembroLocal(guardado);
+  }, []);
+
+  const miembro = searchParams.get("miembro") || miembroLocal;
   const comunidad = searchParams.get("comunidad") || "";
 
   return (
