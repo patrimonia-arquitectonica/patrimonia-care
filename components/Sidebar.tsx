@@ -1,6 +1,7 @@
 "use client";
 import { useRouter, usePathname } from "next/navigation";
 
+// sidebar
 const NAV = [
   { section: "General", items: [
     { label: "Dashboard", icon: "ti-layout-dashboard", href: "/dashboard" },
@@ -8,6 +9,7 @@ const NAV = [
     { label: "Calendario", icon: "ti-calendar", href: "/calendario" },
     { label: "Historial", icon: "ti-history", href: "/historial" },
     { label: "Maestras", icon: "ti-settings", href: "/maestras" },
+
   ]},
 ];
 
