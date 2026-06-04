@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 const NAV = [
   { section: "General", items: [
     { label: "Dashboard", icon: "ti-layout-dashboard", href: "/dashboard" },
-    { label: "Inicio", icon: "ti-home", href: "/" },
+    { label: "Inicio", icon: "ti-home", href: "/inicio" },
     { label: "Calendario", icon: "ti-calendar", href: "/calendario" },
     { label: "Historial", icon: "ti-clock-history", href: "/historial" },
     { label: "Maestras", icon: "ti-settings", href: "/maestras" },
@@ -48,7 +48,7 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
       {/* Usuario */}
       <div className="border-t border-gray-100 p-3">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/inicio")}
           className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-all ${miembro ? "hover:bg-gray-50" : "bg-[#EEEDFE] hover:bg-[#DDD9FC]"}`}
         >
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${miembro ? "bg-[#EEEDFE] text-[#534AB7]" : "bg-[#534AB7] text-white"}`}>
