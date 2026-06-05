@@ -20,8 +20,9 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
   return (
     <aside className="w-56 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen sticky top-0">
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-gray-100">
-        <img src="/arca-logo.png" alt="ARCA" className="h-12 w-auto object-contain" />
+      <div className="px-4 py-5 border-b border-gray-100 flex flex-col items-center gap-2">
+        <img src="/arca-logo.png" alt="ARCA" className="h-10 w-auto object-contain" />
+        <span style={{ fontFamily: "Georgia, serif", letterSpacing: "0.25em" }} className="text-base font-medium text-gray-800 uppercase">Arca</span>
       </div>
 
       {/* Nav */}
@@ -35,7 +36,7 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
                 <button
                   key={item.href}
                   onClick={() => router.push(item.href)}
-                  className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm mb-0.5 transition-all text-left ${active ? "bg-[#EEEDFE] text-[#534AB7] font-medium" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`}
+                  className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm mb-0.5 transition-all text-left ${active ? "bg-[#FDF0ED] text-[#E8614A] font-medium" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`}
                 >
                   <i className={`ti ${item.icon} text-base`} aria-hidden="true"></i>
                   {item.label}
@@ -50,13 +51,13 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
       <div className="border-t border-gray-100 p-3">
         <button
           onClick={() => router.push("/inicio")}
-          className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-all ${miembro ? "hover:bg-gray-50" : "bg-[#EEEDFE] hover:bg-[#DDD9FC]"}`}
+          className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg transition-all ${miembro ? "hover:bg-gray-50" : "bg-[#FDF0ED] hover:bg-[#F5C4BB]"}`}
         >
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${miembro ? "bg-[#EEEDFE] text-[#534AB7]" : "bg-[#534AB7] text-white"}`}>
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${miembro ? "bg-[#FDF0ED] text-[#E8614A]" : "bg-[#E8614A] text-white"}`}>
             {miembro ? miembro.slice(0,2).toUpperCase() : "👋"}
           </div>
           <div className="flex-1 text-left min-w-0">
-            <p className={`text-sm font-medium truncate ${miembro ? "text-gray-800" : "text-[#534AB7]"}`}>
+            <p className={`text-sm font-medium truncate ${miembro ? "text-gray-800" : "text-[#E8614A]"}`}>
             {miembro || "¿Quién eres?"}
             </p>
             <p className="text-xs text-gray-400 truncate">
