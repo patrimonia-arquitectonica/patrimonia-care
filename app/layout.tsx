@@ -8,7 +8,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "TidyHome",
+  title: "ARCA",
   description: "Your homes, always tidy",
 };
 

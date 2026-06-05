@@ -21,7 +21,7 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
     <aside className="w-56 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 h-screen sticky top-0">
       {/* Logo */}
       <div className="px-4 py-4 border-b border-gray-100">
-        <img src="/logo-tidyhome.svg" alt="TidyHome" className="h-12 w-auto object-contain" />
+        <img src="/arca-logo.png" alt="ARCA" className="h-12 w-auto object-contain" />
       </div>
 
       {/* Nav */}
