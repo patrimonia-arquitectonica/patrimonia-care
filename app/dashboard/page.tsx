@@ -3,26 +3,32 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
+import RegistroDetalle from "@/components/RegistroDetalle";
+import AlertaDetalle from "@/components/AlertaDetalle";
 
 export default function Dashboard() {
   const router = useRouter();
   const [alertas, setAlertas] = useState<any[]>([]);
   const [registros, setRegistros] = useState<any[]>([]);
+  const [miembros, setMiembros] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [semanaOffset, setSemanaOffset] = useState(0);
+  const [itemSeleccionado, setItemSeleccionado] = useState<any | null>(null);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState<"registro" | "alerta" | null>(null);
 
-  useEffect(() => {
-    const cargar = async () => {
-      const [{ data: a }, { data: r }] = await Promise.all([
-        supabase.from("alertas").select("*").eq("resuelta", false).order("fecha_alerta", { ascending: true }),
-        supabase.from("Registros").select("*").order("fecha_revision", { ascending: true }).limit(5),
-      ]);
-      if (a) setAlertas(a);
-      if (r) setRegistros(r);
-      setCargando(false);
-    };
-    cargar();
-  }, []);
+  const cargar = async () => {
+    const [{ data: a }, { data: r }, { data: m }] = await Promise.all([
+      supabase.from("alertas").select("*").eq("resuelta", false).order("fecha_alerta", { ascending: true }),
+      supabase.from("Registros").select("*").order("fecha_revision", { ascending: true }).limit(10),
+      supabase.from("miembros").select("*").order("nombre"),
+    ]);
+    if (a) setAlertas(a);
+    if (r) setRegistros(r);
+    if (m) setMiembros(m);
+    setCargando(false);
+  };
+
+  useEffect(() => { cargar(); }, []);
 
   const hoy = new Date();
   const inicioSemana = new Date(hoy);
@@ -46,6 +52,10 @@ export default function Dashboard() {
 
   const esHoy = (dia: Date) => dia.toDateString() === hoy.toDateString();
   const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const mesAnio = inicioSemana.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  const alertasHoy = alertasPorDia(hoy);
+  const totalPendientes = alertas.length;
+  const altaUrgencia = alertas.filter(a => a.urgencia === "Alta").length;
 
   const badgeUrgencia = (urgencia: string | null) => {
     if (urgencia === "Alta") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#A32D2D] font-medium">Alta</span>;
@@ -53,10 +63,6 @@ export default function Dashboard() {
     if (urgencia === "Leve") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11] font-medium">Leve</span>;
     return null;
   };
-
-  const mesAnio = inicioSemana.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
-  const alertasHoy = alertasPorDia(hoy);
-  const totalPendientes = alertas.length;
 
   if (cargando) return (
     <AppLayout>
@@ -66,40 +72,71 @@ export default function Dashboard() {
     </AppLayout>
   );
 
+  // Vista detalle registro
+  if (itemSeleccionado && tipoSeleccionado === "registro") {
+    return (
+      <AppLayout>
+        <RegistroDetalle
+          registro={itemSeleccionado}
+          miembros={miembros}
+          onVolver={() => { setItemSeleccionado(null); setTipoSeleccionado(null); }}
+          onActualizar={cargar}
+        />
+      </AppLayout>
+    );
+  }
+
+  // Vista detalle alerta
+  if (itemSeleccionado && tipoSeleccionado === "alerta") {
+    return (
+      <AppLayout>
+        <AlertaDetalle
+          alerta={itemSeleccionado}
+          miembros={miembros}
+          onVolver={() => { setItemSeleccionado(null); setTipoSeleccionado(null); }}
+          onActualizar={cargar}
+        />
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="p-6">
+        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
               {hoy.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
             </h1>
-            <p className="text-sm text-gray-400">{totalPendientes} alertas pendientes</p>
+            <p className="text-sm text-gray-400">{alertasHoy.length} alertas hoy · {registros.filter(r => r.fecha_revision === hoy.toISOString().split("T")[0]).length} revisiones hoy</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => router.push("/alerta")} className="px-4 py-2 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold">
+            <button onClick={() => router.push("/inicio")} className="px-4 py-2 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold">
               🔔 Crear alerta
             </button>
-            <button onClick={() => router.push("/")} className="px-4 py-2 bg-[#534AB7] text-white rounded-xl text-sm font-semibold">
+            <button onClick={() => router.push("/inicio")} className="px-4 py-2 bg-[#E8614A] text-white rounded-xl text-sm font-semibold hover:bg-[#C44A35] transition-all">
               + Crear registro
             </button>
           </div>
         </div>
 
+        {/* Stats — orden: Alertas hoy / Pendientes total / Alta urgencia / Registros cargados */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
-            { label: "Alertas hoy", value: alertasHoy.length, color: alertasHoy.length > 0 ? "text-[#A32D2D]" : "text-gray-900", bg: alertasHoy.length > 0 ? "border-[#F09595]" : "" },
-            { label: "Pendientes total", value: totalPendientes, color: "text-gray-900", bg: "" },
-            { label: "Registros cargados", value: registros.length, color: "text-gray-900", bg: "" },
-            { label: "Alta urgencia", value: alertas.filter(a => a.urgencia === "Alta").length, color: "text-[#A32D2D]", bg: "" },
+            { label: "Alertas hoy", value: alertasHoy.length, color: alertasHoy.length > 0 ? "text-[#A32D2D]" : "text-gray-900", border: alertasHoy.length > 0 ? "border-[#F09595]" : "border-gray-100" },
+            { label: "Pendientes total", value: totalPendientes, color: "text-gray-900", border: "border-gray-100" },
+            { label: "Alta urgencia", value: altaUrgencia, color: altaUrgencia > 0 ? "text-[#A32D2D]" : "text-gray-900", border: "border-gray-100" },
+            { label: "Registros cargados", value: registros.length, color: "text-gray-900", border: "border-gray-100" },
           ].map((s) => (
-            <div key={s.label} className={`bg-white rounded-2xl border border-gray-100 p-4 ${s.bg}`}>
+            <div key={s.label} className={`bg-white rounded-2xl border p-4 ${s.border}`}>
               <p className="text-xs text-gray-400 mb-1">{s.label}</p>
               <p className={`text-2xl font-semibold ${s.color}`}>{s.value}</p>
             </div>
           ))}
         </div>
 
+        {/* Semana */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -107,9 +144,9 @@ export default function Dashboard() {
               <p className="text-xs text-gray-400 capitalize">{mesAnio}</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setSemanaOffset(semanaOffset - 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 text-sm">‹</button>
-              <button onClick={() => setSemanaOffset(0)} className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 text-xs">Hoy</button>
-              <button onClick={() => setSemanaOffset(semanaOffset + 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 text-sm">›</button>
+              <button onClick={() => setSemanaOffset(semanaOffset - 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-[#FDF0ED] hover:border-[#E8614A] hover:text-[#E8614A] transition-all text-sm">‹</button>
+              <button onClick={() => setSemanaOffset(0)} className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-[#FDF0ED] hover:border-[#E8614A] hover:text-[#E8614A] transition-all text-xs">Hoy</button>
+              <button onClick={() => setSemanaOffset(semanaOffset + 1)} className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-[#FDF0ED] hover:border-[#E8614A] hover:text-[#E8614A] transition-all text-sm">›</button>
             </div>
           </div>
 
@@ -125,19 +162,19 @@ export default function Dashboard() {
 
               return (
                 <div key={i}
+                  onClick={() => router.push(`/calendario?dia=${dia.getDate()}&mes=${dia.getMonth() + 1}&anio=${dia.getFullYear()}`)}
                   className={`rounded-xl p-3 border transition-all cursor-pointer ${
-                    esEsteHoy ? "bg-[#534AB7] border-[#534AB7]" :
+                    esEsteHoy ? "bg-[#E8614A] border-[#E8614A]" :
                     tieneAlta ? "bg-[#FCEBEB] border-[#F09595]" :
-                    tieneAlertas ? "bg-[#EEEDFE] border-[#AFA9EC]" :
+                    tieneAlertas ? "bg-[#FDF0ED] border-[#F5C4BB]" :
                     tieneRegistros ? "bg-[#E1F5EE] border-[#5DCAA5]" :
                     "bg-gray-50 border-gray-100 hover:bg-gray-100"
-                  }`}
-                  onClick={() => router.push(`/calendario?dia=${dia.getDate()}&mes=${dia.getMonth() + 1}&anio=${dia.getFullYear()}`)}>
-                  <p className={`text-xs font-medium mb-1 ${esEsteHoy ? "text-[#EEEDFE]" : "text-gray-400"}`}>{DIAS[i]}</p>
+                  }`}>
+                  <p className={`text-xs font-medium mb-1 ${esEsteHoy ? "text-white/80" : "text-gray-400"}`}>{DIAS[i]}</p>
                   <p className={`text-xl font-semibold ${
                     esEsteHoy ? "text-white" :
                     tieneAlta ? "text-[#A32D2D]" :
-                    tieneAlertas ? "text-[#534AB7]" :
+                    tieneAlertas ? "text-[#C44A35]" :
                     tieneRegistros ? "text-[#085041]" :
                     "text-gray-700"
                   }`}>{dia.getDate()}</p>
@@ -147,7 +184,7 @@ export default function Dashboard() {
                         <div key={j} className={`text-xs truncate rounded px-1 py-0.5 ${
                           esEsteHoy ? "bg-white/20 text-white" :
                           tieneAlta ? "bg-[#F7C1C1] text-[#A32D2D]" :
-                          tieneAlertas ? "bg-[#CECBF6] text-[#3C3489]" :
+                          tieneAlertas ? "bg-[#F5C4BB] text-[#C44A35]" :
                           "bg-[#9FE1CB] text-[#085041]"
                         }`}>
                           {item.descripcion || "Tarea"}
@@ -166,18 +203,20 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Alertas + Revisiones */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Alertas pendientes */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-semibold text-gray-900">Alertas pendientes</p>
-              <button onClick={() => router.push("/calendario")} className="text-xs text-[#534AB7]">Ver todas →</button>
+              <button onClick={() => router.push("/historial?tipo=Alertas")} className="text-xs text-[#E8614A] hover:underline">Ver historial →</button>
             </div>
             {alertas.length === 0 ? (
               <p className="text-center text-gray-400 text-sm py-6">¡Todo al día! 🎉</p>
             ) : (
               <div className="space-y-2">
                 {alertas.slice(0, 4).map((a) => (
-                  <div key={a.id} onClick={() => router.push(`/calendario?dia=${a.fecha_alerta ? new Date(a.fecha_alerta).getUTCDate() : ""}&mes=${a.fecha_alerta ? new Date(a.fecha_alerta).getUTCMonth() + 1 : ""}&anio=${a.fecha_alerta ? new Date(a.fecha_alerta).getUTCFullYear() : ""}`)} className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-all">
+                  <div key={a.id} onClick={() => { setItemSeleccionado(a); setTipoSeleccionado("alerta"); }} className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-[#FDF0ED] cursor-pointer transition-all">
                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${a.urgencia === "Alta" ? "bg-[#E24B4A]" : a.urgencia === "Media" ? "bg-[#EF9F27]" : "bg-[#639922]"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{a.descripcion || "Sin descripción"}</p>
@@ -190,18 +229,19 @@ export default function Dashboard() {
             )}
           </div>
 
+          {/* Próximas revisiones */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-semibold text-gray-900">Próximas revisiones</p>
-              <button onClick={() => router.push("/historial")} className="text-xs text-[#534AB7]">Ver historial →</button>
+              <button onClick={() => router.push("/historial?tipo=Registros")} className="text-xs text-[#E8614A] hover:underline">Ver historial →</button>
             </div>
             {registros.length === 0 ? (
               <p className="text-center text-gray-400 text-sm py-6">No hay revisiones programadas</p>
             ) : (
               <div className="space-y-2">
-                {registros.map((r) => (
-                  <div key={r.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 cursor-pointer transition-all">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${r.tipo === "mantenimiento" ? "bg-[#EEEDFE]" : "bg-[#E1F5EE]"}`}>
+                {registros.slice(0, 4).map((r) => (
+                  <div key={r.id} onClick={() => { setItemSeleccionado(r); setTipoSeleccionado("registro"); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#FDF0ED] cursor-pointer transition-all">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${r.tipo === "mantenimiento" ? "bg-[#FDF0ED]" : "bg-[#E1F5EE]"}`}>
                       {r.tipo === "mantenimiento" ? "🔧" : "🪑"}
                     </div>
                     <div className="flex-1 min-w-0">

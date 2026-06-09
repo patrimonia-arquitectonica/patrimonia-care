@@ -3,6 +3,8 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
+import RegistroDetalle from "@/components/RegistroDetalle";
+import AlertaDetalle from "@/components/AlertaDetalle";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
@@ -11,20 +13,19 @@ function CalendarioInner() {
   const searchParams = useSearchParams();
   const hoy = new Date();
 
-  const [mes, setMes] = useState(hoy.getMonth());
-  const [anio, setAnio] = useState(hoy.getFullYear());
+  const [mes, setMes] = useState(searchParams.get("mes") ? parseInt(searchParams.get("mes")!) - 1 : hoy.getMonth());
+  const [anio, setAnio] = useState(searchParams.get("anio") ? parseInt(searchParams.get("anio")!) : hoy.getFullYear());
+  const [diaSeleccionado, setDiaSeleccionado] = useState<number | null>(searchParams.get("dia") ? parseInt(searchParams.get("dia")!) : null);
   const [alertas, setAlertas] = useState<any[]>([]);
   const [alertasResueltas, setAlertasResueltas] = useState<any[]>([]);
   const [revisiones, setRevisiones] = useState<any[]>([]);
   const [miembros, setMiembros] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [diaSeleccionado, setDiaSeleccionado] = useState<number | null>(null);
-  const [alertaSeleccionada, setAlertaSeleccionada] = useState<any | null>(null);
-  const [reprogramando, setReprogramando] = useState(false);
-  const [nuevaFecha, setNuevaFecha] = useState("");
-  const [seleccionandoMiembro, setSeleccionandoMiembro] = useState(false);
-  const [miembroSeleccionado, setMiembroSeleccionado] = useState("");
   const [creandoEnDia, setCreandoEnDia] = useState(false);
+
+  // Item seleccionado para desglose
+  const [itemSeleccionado, setItemSeleccionado] = useState<any | null>(null);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState<"registro" | "alerta" | null>(null);
 
   useEffect(() => { cargarTodo(); }, [mes, anio]);
 
@@ -43,18 +44,6 @@ function CalendarioInner() {
     if (miem) setMiembros(miem);
     if (rev) setRevisiones(rev);
     setCargando(false);
-  };
-
-  const marcarResuelta = async (id: string) => {
-    await supabase.from("alertas").update({ resuelta: true }).eq("id", id);
-    setAlertaSeleccionada(null);
-    cargarTodo();
-  };
-
-  const reprogramar = async (id: string, fecha: string) => {
-    await supabase.from("alertas").update({ fecha_alerta: fecha }).eq("id", id);
-    setReprogramando(false); setNuevaFecha(""); setAlertaSeleccionada(null);
-    cargarTodo();
   };
 
   const mesAnterior = () => {
@@ -97,111 +86,35 @@ function CalendarioInner() {
     </AppLayout>
   );
 
-  if (alertaSeleccionada) {
-    const a = alertaSeleccionada;
+  // Vista desglose registro
+  if (itemSeleccionado && tipoSeleccionado === "registro") {
     return (
       <AppLayout>
-        <div className="p-6 max-w-lg">
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center gap-3">
-              <button onClick={() => { setAlertaSeleccionada(null); setReprogramando(false); setSeleccionandoMiembro(false); setMiembroSeleccionado(""); }} className="text-gray-400 text-lg">←</button>
-              <div className="flex-1">
-                <h1 className="text-base font-semibold text-gray-900">{a._tipo === "revision" ? "Próxima revisión" : "Detalle alerta"}</h1>
-                <p className="text-xs text-gray-400">#{a.id.slice(0,8).toUpperCase()}</p>
-              </div>
-              {a._tipo === "revision" ? <span className="text-xs px-2 py-0.5 rounded-full bg-[#FDF0ED] text-[#E8614A] font-medium">📅 Revisión</span> : badgeUrgencia(a.urgencia)}
-            </div>
-            <div className="px-5 py-5 space-y-4">
-              {a.resuelta && <div className="bg-[#E1F5EE] border border-[#5DCAA5] rounded-xl px-4 py-2 text-xs text-[#085041] font-medium">✓ Esta alerta fue resuelta</div>}
-              <div className="bg-[#FDF0ED] rounded-2xl p-4 space-y-2">
-                {(a._tipo === "revision" ? [
-                  ["Persona", a.persona],
-                  ["Comunidad", a.comunidad],
-                  ["Espacio", a.espacio],
-                  ["Categoría", a.categoria],
-                  ["Subcategoría", a.subcategoria],
-                  ["Próx. revisión", a.fecha_revision ? new Date(a.fecha_revision).toLocaleDateString("es-ES") : "—"],
-                ] : [
-                  ["Creada por", a.persona],
-                  ["Comunidad", a.comunidad],
-                  ["Espacio", a.espacio],
-                  ["Categoría", a.categoria],
-                  ["Urgencia", a.urgencia || "—"],
-                  ["Fecha", a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleDateString("es-ES") : "—"],
-                ]).filter(([, val]) => val && val !== "—").map(([lbl, val]) => (
-                  <div key={lbl} className="flex justify-between text-sm border-b border-[#F5C4BB] pb-2 last:border-0 last:pb-0">
-                    <span className="text-[#E8614A]">{lbl}</span>
-                    <span className="text-[#C44A35] font-medium">{val}</span>
-                  </div>
-                ))}
-              </div>
-              {a.descripcion && (
-                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">📋 Descripción</p>
-                  <p className="text-sm text-gray-700">{a.descripcion}</p>
-                </div>
-              )}
-              {a.comentario && (
-                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">💬 Comentario</p>
-                  <p className="text-sm text-gray-700">{a.comentario}</p>
-                </div>
-              )}
-              {a._tipo === "revision" && (
-                <button onClick={() => router.push(`/mantenimiento?miembro=&comunidad=${a.comunidad}&espacio=${a.espacio}`)} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold hover:bg-[#C44A35] transition-all">
-                  🔧 Crear registro de revisión
-                </button>
-              )}
-              {!a.resuelta && a._tipo !== "revision" && (
-                reprogramando ? (
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block">Nueva fecha</label>
-                    <input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#E8614A]" />
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => setReprogramando(false)} className="py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
-                      <button onClick={() => nuevaFecha && reprogramar(a.id, nuevaFecha)} disabled={!nuevaFecha} className="py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40">Confirmar</button>
-                    </div>
-                  </div>
-                ) : seleccionandoMiembro ? (
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">¿Quién resuelve esta alerta?</p>
-                    <div className="space-y-2">
-                      {miembros.map((m) => (
-                        <button key={m.id} onClick={() => setMiembroSeleccionado(m.nombre)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${miembroSeleccionado === m.nombre ? "bg-[#FDF0ED] border-[#E8614A]" : "bg-gray-50 border-gray-200"}`}>
-                          <div className="w-7 h-7 rounded-full bg-[#FDF0ED] flex items-center justify-center text-xs font-medium text-[#E8614A]">{m.nombre.slice(0,2).toUpperCase()}</div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-800">{m.nombre}</p>
-                            <p className="text-xs text-gray-400">{m.rol}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => { setSeleccionandoMiembro(false); setMiembroSeleccionado(""); }} className="py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
-                      <button onClick={() => {
-                        if (!miembroSeleccionado) return;
-                        const params = new URLSearchParams({ miembro: miembroSeleccionado, comunidad: a.comunidad || "", area: a.area || "", espacio: a.espacio || "" });
-                        router.push(`${a.tipo === "permanente" ? "/permanente" : "/mantenimiento"}?${params.toString()}`);
-                      }} disabled={!miembroSeleccionado} className="py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40">
-                        Ir al formulario →
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <button onClick={() => setSeleccionandoMiembro(true)} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold hover:bg-[#C44A35] transition-all">✅ Crear registro — resolver ahora</button>
-                    <button onClick={() => setReprogramando(true)} className="w-full py-3 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold">📅 Reprogramar</button>
-                    <button onClick={() => marcarResuelta(a.id)} className="w-full py-3 bg-[#E1F5EE] border border-[#1D9E75] text-[#085041] rounded-xl text-sm font-medium">✓ Marcar como resuelta</button>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </div>
+        <RegistroDetalle
+          registro={itemSeleccionado}
+          miembros={miembros}
+          onVolver={() => { setItemSeleccionado(null); setTipoSeleccionado(null); }}
+          onActualizar={cargarTodo}
+        />
       </AppLayout>
     );
   }
 
+  // Vista desglose alerta
+  if (itemSeleccionado && tipoSeleccionado === "alerta") {
+    return (
+      <AppLayout>
+        <AlertaDetalle
+          alerta={itemSeleccionado}
+          miembros={miembros}
+          onVolver={() => { setItemSeleccionado(null); setTipoSeleccionado(null); }}
+          onActualizar={cargarTodo}
+        />
+      </AppLayout>
+    );
+  }
+
+  // Vista día
   if (diaSeleccionado) {
     const pendientes = alertasDelDia(diaSeleccionado);
     const resueltas = alertasResueltasDelDia(diaSeleccionado);
@@ -220,12 +133,11 @@ function CalendarioInner() {
               </div>
             </div>
             <div className="px-5 py-5 space-y-2">
-              {/* Revisiones */}
               {revs.length > 0 && (
                 <div className="mb-1">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">📅 Revisiones programadas</p>
                   {revs.map((r) => (
-                    <button key={r.id} onClick={() => setAlertaSeleccionada({ ...r, _tipo: "revision" })} className="w-full text-left border rounded-xl px-4 py-3 bg-[#FDF0ED] border-[#F5C4BB] hover:border-[#E8614A] transition-all mb-2">
+                    <button key={r.id} onClick={() => { setItemSeleccionado(r); setTipoSeleccionado("registro"); }} className="w-full text-left border rounded-xl px-4 py-3 bg-[#FDF0ED] border-[#F5C4BB] hover:border-[#E8614A] transition-all mb-2">
                       <p className="text-xs text-[#E8614A] font-medium mb-1">🔧 {r.categoria || "Mantenimiento"}</p>
                       <p className="text-sm font-medium text-gray-800">{r.descripcion || "Sin descripción"}</p>
                       <p className="text-xs text-gray-400">{r.comunidad} · {r.persona}</p>
@@ -234,10 +146,9 @@ function CalendarioInner() {
                 </div>
               )}
 
-              {/* Alertas */}
               {todas.length === 0 && revs.length === 0 && !creandoEnDia && <p className="text-center text-gray-400 text-sm py-4">No hay nada este día</p>}
               {todas.map((a) => (
-                <button key={a.id} onClick={() => setAlertaSeleccionada({ ...a, _tipo: "alerta" })} className={`w-full text-left border rounded-xl px-4 py-3 transition-all ${a.resuelta ? "bg-[#E1F5EE] border-[#5DCAA5] opacity-75" : a.vencida ? "bg-[#FCEBEB] border-[#F09595]" : "bg-gray-50 border-gray-200 hover:border-[#E8614A]"}`}>
+                <button key={a.id} onClick={() => { setItemSeleccionado(a); setTipoSeleccionado("alerta"); }} className={`w-full text-left border rounded-xl px-4 py-3 transition-all ${a.resuelta ? "bg-[#E1F5EE] border-[#5DCAA5] opacity-75" : a.vencida ? "bg-[#FCEBEB] border-[#F09595]" : "bg-gray-50 border-gray-200 hover:border-[#E8614A]"}`}>
                   <p className="text-xs text-[#E8614A] font-medium mb-1">#{a.id.slice(0,8).toUpperCase()}{a.resuelta ? " ✓ resuelta" : a.vencida ? " ⚠️ vencida" : ""}</p>
                   <div className="flex justify-between items-start">
                     <div>
@@ -252,7 +163,7 @@ function CalendarioInner() {
                 <div className="space-y-2 pt-2">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">¿Qué quieres crear?</p>
                   <button onClick={() => router.push(`/alerta`)} className="w-full py-3 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold">🔔 Crear alerta para este día</button>
-                  <button onClick={() => router.push("/")} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold">+ Crear registro</button>
+                  <button onClick={() => router.push("/inicio")} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold">+ Crear registro</button>
                   <button onClick={() => setCreandoEnDia(false)} className="w-full py-3 bg-gray-50 border border-gray-200 text-gray-500 rounded-xl text-sm">Cancelar</button>
                 </div>
               ) : (
@@ -314,7 +225,7 @@ function CalendarioInner() {
                       tieneVencidas ? "bg-[#FCEBEB] text-[#A32D2D]" :
                       tienePendientes ? "bg-[#FDF0ED] text-[#C44A35] hover:bg-[#F5C4BB]" :
                       tieneResueltas ? "bg-[#E1F5EE] text-[#085041]" :
-                      tieneRevisiones ? "bg-[#EEF6FF] text-[#1D4ED8] hover:bg-[#DBEAFE]" :
+                      tieneRevisiones ? "bg-[#FDF0ED] text-[#C44A35] hover:bg-[#F5C4BB]" :
                       "text-gray-400 hover:bg-gray-50"
                     }`}>
                     <span className="text-sm font-medium">{dia}</span>
@@ -322,7 +233,7 @@ function CalendarioInner() {
                       <div className="flex gap-0.5 mt-1">
                         {tienePendientes && <div className={`w-1.5 h-1.5 rounded-full ${tieneVencidas ? "bg-[#A32D2D]" : "bg-[#E8614A]"}`} />}
                         {tieneResueltas && <div className="w-1.5 h-1.5 rounded-full bg-[#1D9E75]" />}
-                        {tieneRevisiones && <div className="w-1.5 h-1.5 rounded-full bg-[#1D4ED8]" />}
+                        {tieneRevisiones && <div className="w-1.5 h-1.5 rounded-full bg-[#C44A35]" />}
                       </div>
                     )}
                   </button>
@@ -344,12 +255,10 @@ function CalendarioInner() {
             ) : (
               <div className="space-y-2">
                 {revisiones.slice(0, 3).map((r) => (
-                  <button key={r.id} onClick={() => setAlertaSeleccionada({ ...r, _tipo: "revision" })} className="w-full text-left border rounded-xl px-4 py-3 bg-[#FDF0ED] border-[#F5C4BB] hover:border-[#E8614A] transition-all">
+                  <button key={r.id} onClick={() => { setItemSeleccionado(r); setTipoSeleccionado("registro"); }} className="w-full text-left border rounded-xl px-4 py-3 bg-[#FDF0ED] border-[#F5C4BB] hover:border-[#E8614A] transition-all">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs text-[#E8614A] font-medium mb-0.5">
-                          📅 {r.fecha_revision ? new Date(r.fecha_revision).toLocaleDateString("es-ES") : "Sin fecha"}
-                        </p>
+                        <p className="text-xs text-[#E8614A] font-medium mb-0.5">📅 {r.fecha_revision ? new Date(r.fecha_revision).toLocaleDateString("es-ES") : "Sin fecha"}</p>
                         <p className="text-sm font-medium text-gray-800">{r.descripcion || "Sin descripción"}</p>
                         <p className="text-xs text-gray-400">{r.comunidad} · {r.persona}</p>
                       </div>
@@ -358,12 +267,10 @@ function CalendarioInner() {
                   </button>
                 ))}
                 {alertas.slice(0, 3).map((a) => (
-                  <button key={a.id} onClick={() => setAlertaSeleccionada({ ...a, _tipo: "alerta" })} className="w-full text-left border rounded-xl px-4 py-3 bg-gray-50 border-gray-200 hover:border-[#E8614A] hover:bg-[#FDF0ED] transition-all">
+                  <button key={a.id} onClick={() => { setItemSeleccionado(a); setTipoSeleccionado("alerta"); }} className="w-full text-left border rounded-xl px-4 py-3 bg-gray-50 border-gray-200 hover:border-[#E8614A] hover:bg-[#FDF0ED] transition-all">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs text-[#E8614A] font-medium mb-0.5">
-                          🔔 {a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleDateString("es-ES") : "Sin fecha"}
-                        </p>
+                        <p className="text-xs text-[#E8614A] font-medium mb-0.5">🔔 {a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleDateString("es-ES") : "Sin fecha"}</p>
                         <p className="text-sm font-medium text-gray-800">{a.descripcion || "Sin descripción"}</p>
                         <p className="text-xs text-gray-400">{a.comunidad}</p>
                       </div>

@@ -11,7 +11,9 @@ function MantenimientoInner() {
   const comunidad = searchParams.get("comunidad") || "";
   const area = searchParams.get("area") || "";
   const espacio = searchParams.get("espacio") || "";
-  const resuelve = searchParams.get("resuelve") || ""; // ID del registro anterior a resolver
+  const resuelve = searchParams.get("resuelve") || "";
+  const ref_padre = searchParams.get("ref_padre") || "";
+  const ref_alerta = searchParams.get("ref_alerta") || "";
 
   const [categoria, setCategoria] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -71,6 +73,7 @@ function MantenimientoInner() {
             <div className="w-full bg-gray-50 rounded-2xl p-4 text-left space-y-3 border border-gray-100">
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Acciones realizadas</p>
               {resuelve && <div className="flex items-center gap-2 text-sm text-gray-700">✅ Registro anterior marcado como resuelto</div>}
+              {ref_alerta && <div className="flex items-center gap-2 text-sm text-gray-700">🔔 Alerta marcada como resuelta</div>}
               {fecha && <div className="flex items-center gap-2 text-sm text-gray-700">📅 Próxima revisión: {new Date(fecha).toLocaleDateString("es-ES")}</div>}
               <div className="flex items-center gap-2 text-sm text-gray-700">📧 Factura enviada a facturas@arca.com</div>
               <div className="flex items-center gap-2 text-sm text-gray-700">🗄️ Registro guardado en historial</div>
@@ -95,6 +98,7 @@ function MantenimientoInner() {
             <h1 className="text-xl font-semibold text-gray-900">Nuevo mantenimiento</h1>
             {(miembro || comunidad) && <p className="text-sm text-gray-400">{miembro}{comunidad ? ` · ${comunidad}${area ? ` · ${area}` : ""}` : ""}{espacio ? ` · ${espacio}` : ""}</p>}
             {resuelve && <p className="text-xs text-[#E8614A] mt-0.5">↩ Resolverá el registro anterior</p>}
+            {ref_alerta && <p className="text-xs text-[#EF9F27] mt-0.5">🔔 Resolverá la alerta asociada</p>}
           </div>
           <span className="text-xs px-3 py-1 rounded-full bg-[#E8614A] text-white font-medium">Registro</span>
         </div>
@@ -248,7 +252,7 @@ function MantenimientoInner() {
                   }
                 }
 
-                // Crear nuevo registro
+                // Crear nuevo registro con ref_padre y ref_alerta
                 const { error } = await supabase.from("Registros").insert({
                   tipo: "mantenimiento",
                   comunidad: `${comunidad}${area ? ` · ${area}` : ""}`,
@@ -261,15 +265,26 @@ function MantenimientoInner() {
                   fotos_arreglo: urlsFotos,
                   fecha_revision: fecha || null,
                   fecha_creacion: new Date().toISOString(),
+                  ref_padre: ref_padre || null,
+                  ref_alerta: ref_alerta || null,
                 });
 
-                // Si viene de un registro anterior, marcarlo como resuelto
+                // Marcar registro anterior como resuelto
                 if (!error && resuelve) {
                   await supabase.from("Registros").update({
                     estado: "Resuelto",
                     resuelto_por: miembro,
                     fecha_arreglo: new Date().toISOString().split("T")[0],
                   }).eq("id", resuelve);
+                }
+
+                // Marcar alerta como resuelta y con tiene_registro: true
+                if (!error && ref_alerta) {
+                  await supabase.from("alertas").update({
+                    resuelta: true,
+                    tiene_registro: true,
+                    resuelto_por: miembro,
+                  }).eq("id", ref_alerta);
                 }
 
                 if (!error) {
