@@ -23,7 +23,10 @@ export default function Sidebar({ miembro, comunidad }: { miembro?: string; comu
       {/* Logo */}
       <div className="px-4 py-5 border-b border-gray-100 flex flex-col items-center gap-2">
         <img src="/arca-logo.png" alt="ARCA" className="h-10 w-auto object-contain" />
-        <span style={{ fontFamily: "Georgia, serif", letterSpacing: "0.25em" }} className="text-base font-medium text-gray-800 uppercase">Arca</span>
+        <div className="flex flex-col items-center">
+            <span style={{ fontFamily: "Georgia, serif", letterSpacing: "0.25em" }} className="text-base font-medium text-gray-800 uppercase">Arca</span>
+            <span style={{ fontFamily: "Georgia, serif", letterSpacing: "0.15em" }} className="text-[9px] text-gray-400 uppercase">House Care</span>
+        </div>
       </div>
 
       {/* Nav */}
