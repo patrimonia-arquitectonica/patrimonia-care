@@ -8,6 +8,23 @@ import AlertaDetalle from "@/components/AlertaDetalle";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
+const getLunes = (fecha: Date) => {
+  const d = new Date(fecha);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const getDomingo = (fecha: Date) => {
+  const lunes = getLunes(fecha);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+  domingo.setHours(23, 59, 59, 999);
+  return domingo;
+};
+
 function CalendarioInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,10 +37,10 @@ function CalendarioInner() {
   const [alertasResueltas, setAlertasResueltas] = useState<any[]>([]);
   const [revisiones, setRevisiones] = useState<any[]>([]);
   const [miembros, setMiembros] = useState<any[]>([]);
+  const [campanas, setCampanas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [creandoEnDia, setCreandoEnDia] = useState(false);
 
-  // Item seleccionado para desglose
   const [itemSeleccionado, setItemSeleccionado] = useState<any | null>(null);
   const [tipoSeleccionado, setTipoSeleccionado] = useState<"registro" | "alerta" | null>(null);
 
@@ -33,16 +50,18 @@ function CalendarioInner() {
     setCargando(true);
     const primerDia = `${anio}-${String(mes + 1).padStart(2, "0")}-01`;
     const ultimoDia = `${anio}-${String(mes + 1).padStart(2, "0")}-${new Date(anio, mes + 1, 0).getDate()}`;
-    const [{ data: pend }, { data: res }, { data: miem }, { data: rev }] = await Promise.all([
+    const [{ data: pend }, { data: res }, { data: miem }, { data: rev }, { data: c }] = await Promise.all([
       supabase.from("alertas").select("*").eq("resuelta", false).gte("fecha_alerta", primerDia).lte("fecha_alerta", ultimoDia).order("fecha_alerta", { ascending: true }),
       supabase.from("alertas").select("*").eq("resuelta", true).gte("fecha_alerta", primerDia).lte("fecha_alerta", ultimoDia).order("fecha_alerta", { ascending: true }),
       supabase.from("miembros").select("*").order("nombre"),
-      supabase.from("Registros").select("*").gte("fecha_revision", primerDia).lte("fecha_revision", ultimoDia).order("fecha_revision", { ascending: true }),
+      supabase.from("Registros").select("*").is("campana_id", null).gte("fecha_revision", primerDia).lte("fecha_revision", ultimoDia).order("fecha_revision", { ascending: true }),
+      supabase.from("campanas").select("*").eq("activa", true),
     ]);
     if (pend) setAlertas(pend);
     if (res) setAlertasResueltas(res);
     if (miem) setMiembros(miem);
     if (rev) setRevisiones(rev);
+    if (c) setCampanas(c);
     setCargando(false);
   };
 
@@ -71,6 +90,18 @@ function CalendarioInner() {
     return revisiones.filter((r) => r.fecha_revision === diaStr);
   };
 
+  // Campañas activas en un día concreto
+  const campanasDelDia = (dia: number) => {
+    const fecha = new Date(anio, mes, dia, 12, 0, 0);
+    return campanas.filter(c => {
+        const [y, m, d] = c.fecha_instancia.split("-").map(Number);
+        const instancia = new Date(y, m - 1, d, 12, 0, 0);
+        const lunes = getLunes(instancia);
+        const domingo = getDomingo(instancia);
+        return fecha >= lunes && fecha <= domingo;
+    });
+   };
+
   const badgeUrgencia = (urgencia: string | null) => {
     if (!urgencia) return <span className="text-xs px-2 py-0.5 rounded-full bg-[#E1F5EE] text-[#085041] font-medium">Permanente</span>;
     if (urgencia === "Alta") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#A32D2D] font-medium">Alta</span>;
@@ -86,7 +117,6 @@ function CalendarioInner() {
     </AppLayout>
   );
 
-  // Vista desglose registro
   if (itemSeleccionado && tipoSeleccionado === "registro") {
     return (
       <AppLayout>
@@ -100,7 +130,6 @@ function CalendarioInner() {
     );
   }
 
-  // Vista desglose alerta
   if (itemSeleccionado && tipoSeleccionado === "alerta") {
     return (
       <AppLayout>
@@ -114,11 +143,11 @@ function CalendarioInner() {
     );
   }
 
-  // Vista día
   if (diaSeleccionado) {
     const pendientes = alertasDelDia(diaSeleccionado);
     const resueltas = alertasResueltasDelDia(diaSeleccionado);
     const revs = revisionesDelDia(diaSeleccionado);
+    const camps = campanasDelDia(diaSeleccionado);
     const todas = [...pendientes, ...resueltas];
 
     return (
@@ -129,10 +158,25 @@ function CalendarioInner() {
               <button onClick={() => { setDiaSeleccionado(null); setCreandoEnDia(false); }} className="text-gray-400 text-lg">←</button>
               <div className="flex-1">
                 <h1 className="text-base font-semibold text-gray-900">{diaSeleccionado} de {MESES[mes].toLowerCase()}</h1>
-                <p className="text-xs text-gray-400">{pendientes.length} alerta{pendientes.length !== 1 ? "s" : ""} · {revs.length} revisión{revs.length !== 1 ? "es" : ""}</p>
+                <p className="text-xs text-gray-400">{pendientes.length} alerta{pendientes.length !== 1 ? "s" : ""} · {revs.length} revisión{revs.length !== 1 ? "es" : ""}{camps.length > 0 ? ` · ${camps.length} campaña${camps.length !== 1 ? "s" : ""}` : ""}</p>
               </div>
             </div>
             <div className="px-5 py-5 space-y-2">
+
+              {/* Campañas */}
+              {camps.length > 0 && (
+                <div className="mb-1">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">📋 Campañas</p>
+                  {camps.map((c) => (
+                    <button key={c.id} onClick={() => router.push(`/campanas?id=${c.id}`)} className="w-full text-left border rounded-xl px-4 py-3 bg-[#EAF3DE] border-[#A8D57A] hover:border-[#639922] transition-all mb-2">
+                      <p className="text-xs text-[#3B6D11] font-medium mb-1">📋 Campaña semanal</p>
+                      <p className="text-sm font-medium text-gray-800">{c.nombre}</p>
+                      <p className="text-xs text-gray-400">{c.categoria} · Ver desglose →</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {revs.length > 0 && (
                 <div className="mb-1">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">📅 Revisiones programadas</p>
@@ -146,7 +190,7 @@ function CalendarioInner() {
                 </div>
               )}
 
-              {todas.length === 0 && revs.length === 0 && !creandoEnDia && <p className="text-center text-gray-400 text-sm py-4">No hay nada este día</p>}
+              {todas.length === 0 && revs.length === 0 && camps.length === 0 && !creandoEnDia && <p className="text-center text-gray-400 text-sm py-4">No hay nada este día</p>}
               {todas.map((a) => (
                 <button key={a.id} onClick={() => { setItemSeleccionado(a); setTipoSeleccionado("alerta"); }} className={`w-full text-left border rounded-xl px-4 py-3 transition-all ${a.resuelta ? "bg-[#E1F5EE] border-[#5DCAA5] opacity-75" : a.vencida ? "bg-[#FCEBEB] border-[#F09595]" : "bg-gray-50 border-gray-200 hover:border-[#E8614A]"}`}>
                   <p className="text-xs text-[#E8614A] font-medium mb-1">#{a.id.slice(0,8).toUpperCase()}{a.resuelta ? " ✓ resuelta" : a.vencida ? " ⚠️ vencida" : ""}</p>
@@ -212,10 +256,12 @@ function CalendarioInner() {
                 const pendientes = alertasDelDia(dia);
                 const resueltas = alertasResueltasDelDia(dia);
                 const revs = revisionesDelDia(dia);
+                const camps = campanasDelDia(dia);
                 const tieneVencidas = pendientes.some(a => a.vencida);
                 const tienePendientes = pendientes.length > 0;
                 const tieneResueltas = resueltas.length > 0 && pendientes.length === 0;
                 const tieneRevisiones = revs.length > 0;
+                const tieneCampana = camps.length > 0;
                 const esHoyDia = esMesActual && dia === hoyDia;
 
                 return (
@@ -226,14 +272,16 @@ function CalendarioInner() {
                       tienePendientes ? "bg-[#FDF0ED] text-[#C44A35] hover:bg-[#F5C4BB]" :
                       tieneResueltas ? "bg-[#E1F5EE] text-[#085041]" :
                       tieneRevisiones ? "bg-[#FDF0ED] text-[#C44A35] hover:bg-[#F5C4BB]" :
+                      tieneCampana ? "bg-[#EAF3DE] text-[#3B6D11] hover:bg-[#D4EDBA]" :
                       "text-gray-400 hover:bg-gray-50"
                     }`}>
                     <span className="text-sm font-medium">{dia}</span>
-                    {(tienePendientes || tieneResueltas || tieneRevisiones) && !esHoyDia && (
+                    {(tienePendientes || tieneResueltas || tieneRevisiones || tieneCampana) && !esHoyDia && (
                       <div className="flex gap-0.5 mt-1">
                         {tienePendientes && <div className={`w-1.5 h-1.5 rounded-full ${tieneVencidas ? "bg-[#A32D2D]" : "bg-[#E8614A]"}`} />}
                         {tieneResueltas && <div className="w-1.5 h-1.5 rounded-full bg-[#1D9E75]" />}
                         {tieneRevisiones && <div className="w-1.5 h-1.5 rounded-full bg-[#C44A35]" />}
+                        {tieneCampana && <div className="w-1.5 h-1.5 rounded-full bg-[#639922]" />}
                       </div>
                     )}
                   </button>
@@ -245,6 +293,7 @@ function CalendarioInner() {
               <span><span className="inline-block w-2 h-2 rounded-full bg-[#1D9E75] mr-1.5"></span>Resuelto</span>
               <span><span className="inline-block w-2 h-2 rounded-full bg-[#C44A35] mr-1.5"></span>Revisión</span>
               <span><span className="inline-block w-2 h-2 rounded-full bg-[#A32D2D] mr-1.5"></span>Vencida</span>
+              <span><span className="inline-block w-2 h-2 rounded-full bg-[#639922] mr-1.5"></span>Campaña</span>
             </div>
           </div>
 

@@ -1,18 +1,38 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 import RegistroDetalle from "@/components/RegistroDetalle";
 import AlertaDetalle from "@/components/AlertaDetalle";
 
+const getLunes = (fecha: Date) => {
+  const d = new Date(fecha);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const getDomingo = (fecha: Date) => {
+  const lunes = getLunes(fecha);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+  domingo.setHours(23, 59, 59, 999);
+  return domingo;
+};
+
 function HistorialInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const filtroInicialTipo = searchParams.get("tipo") || "Todos";
 
   const [registros, setRegistros] = useState<any[]>([]);
   const [alertas, setAlertas] = useState<any[]>([]);
   const [miembros, setMiembros] = useState<any[]>([]);
+  const [campanas, setCampanas] = useState<any[]>([]);
+  const [registrosCampana, setRegistrosCampana] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
@@ -26,16 +46,22 @@ function HistorialInner() {
   const [itemSeleccionado, setItemSeleccionado] = useState<any | null>(null);
   const [tipoSeleccionado, setTipoSeleccionado] = useState<"registro" | "alerta" | null>(null);
 
+  const hoy = new Date();
+
   useEffect(() => {
     const cargar = async () => {
-      const [{ data: r }, { data: a }, { data: m }] = await Promise.all([
+      const [{ data: r }, { data: a }, { data: m }, { data: c }, { data: rc }] = await Promise.all([
         supabase.from("Registros").select("*").order("fecha_creacion", { ascending: false }),
         supabase.from("alertas").select("*").order("fecha_alerta", { ascending: false }),
         supabase.from("miembros").select("*").order("nombre"),
+        supabase.from("campanas").select("*").eq("activa", true),
+        supabase.from("Registros").select("*").not("campana_id", "is", null),
       ]);
       if (r) setRegistros(r);
       if (a) setAlertas(a);
       if (m) setMiembros(m);
+      if (c) setCampanas(c);
+      if (rc) setRegistrosCampana(rc);
       setCargando(false);
     };
     cargar();
@@ -50,9 +76,30 @@ function HistorialInner() {
     if (a) setAlertas(a);
   };
 
+  // Campañas con instancia activa esta semana
+  const campanasActivas = campanas.filter(c => {
+    const lunes = getLunes(new Date(c.fecha_instancia));
+    const domingo = getDomingo(new Date(c.fecha_instancia));
+    return hoy >= lunes && hoy <= domingo;
+  });
+
+  // Progreso de una campaña
+  const getProgresoCampana = (campana: any) => {
+    const regs = registrosCampana.filter(r => r.campana_id === campana.id);
+    const lunes = getLunes(new Date(campana.fecha_instancia));
+    const domingo = getDomingo(new Date(campana.fecha_instancia));
+    const regsInstancia = regs.filter(r =>
+      new Date(r.fecha_creacion) >= lunes && new Date(r.fecha_creacion) <= domingo
+    );
+    const hechos = regsInstancia.filter(r => r.estado === "Resuelto" || r.estado === "Hecho").length;
+    // Total aproximado (no tenemos comunidades aquí, usamos registros como proxy)
+    return { hechos, total: regsInstancia.length > 0 ? Math.max(regsInstancia.length, hechos) : "?" };
+  };
+
   const todosLosItems = [
-    ...registros.map(r => ({ ...r, _tabla: "registro" })),
+    ...registros.filter(r => !r.campana_id).map(r => ({ ...r, _tabla: "registro" })),
     ...alertas.map(a => ({ ...a, _tabla: "alerta" })),
+    ...campanas.map(c => ({ ...c, _tabla: "campana", fecha_creacion: c.fecha_instancia })),
   ].sort((a, b) => {
     const fechaA = a.fecha_creacion || a.fecha_alerta || "";
     const fechaB = b.fecha_creacion || b.fecha_alerta || "";
@@ -61,6 +108,15 @@ function HistorialInner() {
 
   const resultados = todosLosItems.filter((item) => {
     if (idsIA) return idsIA.includes(item.id);
+    if (item._tabla === "campana") {
+      // Campañas solo salen en "Todos" y sin búsqueda
+      if (filtroTipo !== "Todos") return false;
+      if (busqueda) {
+        const q = busqueda.toLowerCase();
+        return item.nombre?.toLowerCase().includes(q) || item.categoria?.toLowerCase().includes(q);
+      }
+      return true;
+    }
     if (filtroTipo === "Registros" && item._tabla !== "registro") return false;
     if (filtroTipo === "Alertas" && item._tabla !== "alerta") return false;
     if (filtroTipo === "Mantenimiento" && item.tipo !== "mantenimiento") return false;
@@ -98,6 +154,7 @@ function HistorialInner() {
   };
 
   const badgeTipo = (item: any) => {
+    if (item._tabla === "campana") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#EAF3DE] text-[#3B6D11] font-medium">📋 Campaña</span>;
     if (item._tabla === "alerta") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#FAEEDA] text-[#854F0B] font-medium">🔔 Alerta</span>;
     if (item.tipo === "mantenimiento") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#FDF0ED] text-[#E8614A] font-medium">🔧 Mantenimiento</span>;
     return <span className="text-xs px-2 py-0.5 rounded-full bg-[#E1F5EE] text-[#085041] font-medium">🪑 Permanente</span>;
@@ -115,10 +172,10 @@ function HistorialInner() {
     return (
       <AppLayout>
         <RegistroDetalle
-            registro={itemSeleccionado}
-            miembros={miembros}
-            onVolver={() => { setItemSeleccionado(null); setTipoSeleccionado(null); }}
-            onActualizar={recargar}
+          registro={itemSeleccionado}
+          miembros={miembros}
+          onVolver={() => { setItemSeleccionado(null); setTipoSeleccionado(null); }}
+          onActualizar={recargar}
         />
       </AppLayout>
     );
@@ -234,18 +291,44 @@ function HistorialInner() {
                 </tr>
               </thead>
               <tbody>
-                {resultados.map((item) => (
-                  <tr key={`${item._tabla}-${item.id}`} onClick={() => { setItemSeleccionado(item); setTipoSeleccionado(item._tabla); }} className="border-b border-gray-50 hover:bg-[#FDF0ED] cursor-pointer transition-all">
-                    <td className="px-5 py-3">
-                      <span className="text-xs font-medium text-[#E8614A]">#{item.id.slice(0,8).toUpperCase()}</span>
-                    </td>
-                    <td className="px-5 py-3">{badgeTipo(item)}</td>
-                    <td className="px-5 py-3 text-sm text-gray-800">{item.descripcion || "Sin descripción"}</td>
-                    <td className="px-5 py-3 text-sm text-gray-400">{item.comunidad}</td>
-                    <td className="px-5 py-3 text-sm text-gray-400">{item.persona}</td>
-                    <td className="px-5 py-3">{badgeEstado(item)}</td>
-                  </tr>
-                ))}
+                {resultados.map((item) => {
+                  if (item._tabla === "campana") {
+                    const { hechos, total } = getProgresoCampana(item);
+                    const pct = total === "?" ? 0 : total === 0 ? 0 : Math.round((hechos / (total as number)) * 100);
+                    return (
+                      <tr key={`campana-${item.id}`} onClick={() => router.push(`/campanas?id=${item.id}`)} className="border-b border-gray-50 hover:bg-[#FDF0ED] cursor-pointer transition-all">
+                        <td className="px-5 py-3">
+                          <span className="text-xs font-medium text-[#E8614A]">#{item.id.slice(0,8).toUpperCase()}</span>
+                        </td>
+                        <td className="px-5 py-3">{badgeTipo(item)}</td>
+                        <td className="px-5 py-3 text-sm text-gray-800 font-medium">{item.nombre}</td>
+                        <td className="px-5 py-3 text-sm text-gray-400">{item.categoria}</td>
+                        <td className="px-5 py-3 text-sm text-gray-400">—</td>
+                        <td className="px-5 py-3">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            item.completada ? "bg-[#E1F5EE] text-[#085041]" :
+                            hechos > 0 ? "bg-[#FAEEDA] text-[#854F0B]" :
+                            "bg-[#FCEBEB] text-[#A32D2D]"
+                          }`}>
+                            {item.completada ? "Completada" : hechos > 0 ? "En curso" : "Pendiente"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return (
+                    <tr key={`${item._tabla}-${item.id}`} onClick={() => { setItemSeleccionado(item); setTipoSeleccionado(item._tabla); }} className="border-b border-gray-50 hover:bg-[#FDF0ED] cursor-pointer transition-all">
+                      <td className="px-5 py-3">
+                        <span className="text-xs font-medium text-[#E8614A]">#{item.id.slice(0,8).toUpperCase()}</span>
+                      </td>
+                      <td className="px-5 py-3">{badgeTipo(item)}</td>
+                      <td className="px-5 py-3 text-sm text-gray-800">{item.descripcion || "Sin descripción"}</td>
+                      <td className="px-5 py-3 text-sm text-gray-400">{item.comunidad}</td>
+                      <td className="px-5 py-3 text-sm text-gray-400">{item.persona}</td>
+                      <td className="px-5 py-3">{badgeEstado(item)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

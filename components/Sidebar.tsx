@@ -7,6 +7,7 @@ const NAV = [
     { label: "Dashboard", icon: "ti-layout-dashboard", href: "/dashboard" },
     { label: "Inicio", icon: "ti-home", href: "/inicio" },
     { label: "Calendario", icon: "ti-calendar", href: "/calendario" },
+    { label: "Campañas", icon: "ti-refresh", href: "/campanas" },
     { label: "Historial", icon: "ti-history", href: "/historial" },
     { label: "Maestras", icon: "ti-settings", href: "/maestras" },
 

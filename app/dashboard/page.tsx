@@ -6,25 +6,45 @@ import AppLayout from "@/components/AppLayout";
 import RegistroDetalle from "@/components/RegistroDetalle";
 import AlertaDetalle from "@/components/AlertaDetalle";
 
+const getLunes = (fecha: Date) => {
+  const d = new Date(fecha);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const getDomingo = (fecha: Date) => {
+  const lunes = getLunes(fecha);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+  domingo.setHours(23, 59, 59, 999);
+  return domingo;
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const [alertas, setAlertas] = useState<any[]>([]);
   const [registros, setRegistros] = useState<any[]>([]);
   const [miembros, setMiembros] = useState<any[]>([]);
+  const [campanas, setCampanas] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [semanaOffset, setSemanaOffset] = useState(0);
   const [itemSeleccionado, setItemSeleccionado] = useState<any | null>(null);
   const [tipoSeleccionado, setTipoSeleccionado] = useState<"registro" | "alerta" | null>(null);
 
   const cargar = async () => {
-    const [{ data: a }, { data: r }, { data: m }] = await Promise.all([
+    const [{ data: a }, { data: r }, { data: m }, { data: c }] = await Promise.all([
       supabase.from("alertas").select("*").eq("resuelta", false).order("fecha_alerta", { ascending: true }),
-      supabase.from("Registros").select("*").order("fecha_revision", { ascending: true }).limit(10),
+      supabase.from("Registros").select("*").is("campana_id", null).order("fecha_revision", { ascending: true }).limit(10),
       supabase.from("miembros").select("*").order("nombre"),
+      supabase.from("campanas").select("*").eq("activa", true),
     ]);
     if (a) setAlertas(a);
     if (r) setRegistros(r);
     if (m) setMiembros(m);
+    if (c) setCampanas(c);
     setCargando(false);
   };
 
@@ -50,6 +70,22 @@ export default function Dashboard() {
     return registros.filter((r) => r.fecha_revision === diaStr);
   };
 
+  // Campañas activas esta semana
+  const campanasActivasSemana = campanas.filter(c => {
+    const lunes = getLunes(new Date(c.fecha_instancia));
+    const domingo = getDomingo(new Date(c.fecha_instancia));
+    return hoy >= lunes && hoy <= domingo;
+  });
+
+  // Hay campaña en un día concreto (cualquier día de la semana de la campaña)
+  const campanasEnDia = (dia: Date) => {
+    return campanas.filter(c => {
+      const lunes = getLunes(new Date(c.fecha_instancia));
+      const domingo = getDomingo(new Date(c.fecha_instancia));
+      return dia >= lunes && dia <= domingo;
+    });
+  };
+
   const esHoy = (dia: Date) => dia.toDateString() === hoy.toDateString();
   const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const mesAnio = inicioSemana.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
@@ -72,7 +108,6 @@ export default function Dashboard() {
     </AppLayout>
   );
 
-  // Vista detalle registro
   if (itemSeleccionado && tipoSeleccionado === "registro") {
     return (
       <AppLayout>
@@ -86,7 +121,6 @@ export default function Dashboard() {
     );
   }
 
-  // Vista detalle alerta
   if (itemSeleccionado && tipoSeleccionado === "alerta") {
     return (
       <AppLayout>
@@ -103,7 +137,6 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="p-6">
-        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
@@ -121,13 +154,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats — orden: Alertas hoy / Pendientes total / Alta urgencia / Registros cargados */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
             { label: "Alertas hoy", value: alertasHoy.length, color: alertasHoy.length > 0 ? "text-[#A32D2D]" : "text-gray-900", border: alertasHoy.length > 0 ? "border-[#F09595]" : "border-gray-100" },
             { label: "Pendientes total", value: totalPendientes, color: "text-gray-900", border: "border-gray-100" },
             { label: "Alta urgencia", value: altaUrgencia, color: altaUrgencia > 0 ? "text-[#A32D2D]" : "text-gray-900", border: "border-gray-100" },
-            { label: "Registros cargados", value: registros.length, color: "text-gray-900", border: "border-gray-100" },
+            { label: "Campañas activas", value: campanasActivasSemana.length, color: campanasActivasSemana.length > 0 ? "text-[#3B6D11]" : "text-gray-900", border: "border-gray-100" },
           ].map((s) => (
             <div key={s.label} className={`bg-white rounded-2xl border p-4 ${s.border}`}>
               <p className="text-xs text-gray-400 mb-1">{s.label}</p>
@@ -154,11 +186,13 @@ export default function Dashboard() {
             {diasSemana.map((dia, i) => {
               const alertasDia = alertasPorDia(dia);
               const registrosDia = registrosPorDia(dia);
+              const campanasDia = campanasEnDia(dia);
               const esEsteHoy = esHoy(dia);
               const tieneAlta = alertasDia.some(a => a.urgencia === "Alta");
               const tieneAlertas = alertasDia.length > 0;
               const tieneRegistros = registrosDia.length > 0;
-              const tieneAlgo = tieneAlertas || tieneRegistros;
+              const tieneCampana = campanasDia.length > 0;
+              const tieneAlgo = tieneAlertas || tieneRegistros || tieneCampana;
 
               return (
                 <div key={i}
@@ -168,6 +202,7 @@ export default function Dashboard() {
                     tieneAlta ? "bg-[#FCEBEB] border-[#F09595]" :
                     tieneAlertas ? "bg-[#FDF0ED] border-[#F5C4BB]" :
                     tieneRegistros ? "bg-[#E1F5EE] border-[#5DCAA5]" :
+                    tieneCampana ? "bg-[#EAF3DE] border-[#639922]" :
                     "bg-gray-50 border-gray-100 hover:bg-gray-100"
                   }`}>
                   <p className={`text-xs font-medium mb-1 ${esEsteHoy ? "text-white/80" : "text-gray-400"}`}>{DIAS[i]}</p>
@@ -176,10 +211,16 @@ export default function Dashboard() {
                     tieneAlta ? "text-[#A32D2D]" :
                     tieneAlertas ? "text-[#C44A35]" :
                     tieneRegistros ? "text-[#085041]" :
+                    tieneCampana ? "text-[#3B6D11]" :
                     "text-gray-700"
                   }`}>{dia.getDate()}</p>
                   {tieneAlgo && (
                     <div className="mt-2 space-y-1">
+                      {tieneCampana && !tieneAlertas && !tieneRegistros && campanasDia.slice(0, 2).map((c, j) => (
+                        <div key={j} className={`text-xs truncate rounded px-1 py-0.5 ${esEsteHoy ? "bg-white/20 text-white" : "bg-[#D4EDBA] text-[#3B6D11]"}`}>
+                          📋 {c.nombre}
+                        </div>
+                      ))}
                       {[...alertasDia, ...registrosDia].slice(0, 2).map((item, j) => (
                         <div key={j} className={`text-xs truncate rounded px-1 py-0.5 ${
                           esEsteHoy ? "bg-white/20 text-white" :
@@ -190,11 +231,6 @@ export default function Dashboard() {
                           {item.descripcion || "Tarea"}
                         </div>
                       ))}
-                      {(alertasDia.length + registrosDia.length) > 2 && (
-                        <p className={`text-xs ${esEsteHoy ? "text-white/70" : "text-gray-400"}`}>
-                          +{alertasDia.length + registrosDia.length - 2} más
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>
@@ -203,7 +239,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Alertas + Revisiones */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Alertas pendientes */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -229,13 +264,26 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Próximas revisiones */}
+          {/* Próximas revisiones + campañas */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-semibold text-gray-900">Próximas revisiones</p>
-              <button onClick={() => router.push("/historial?tipo=Registros")} className="text-xs text-[#E8614A] hover:underline">Ver historial →</button>
+              <button onClick={() => router.push("/historial")} className="text-xs text-[#E8614A] hover:underline">Ver historial →</button>
             </div>
-            {registros.length === 0 ? (
+
+            {/* Campañas activas esta semana */}
+            {campanasActivasSemana.map((c) => (
+              <div key={c.id} onClick={() => router.push(`/campanas?id=${c.id}`)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#EAF3DE] cursor-pointer transition-all mb-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 bg-[#EAF3DE]">📋</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{c.nombre}</p>
+                  <p className="text-xs text-gray-400">Campaña · Esta semana</p>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-[#EAF3DE] text-[#3B6D11]">En curso</span>
+              </div>
+            ))}
+
+            {registros.length === 0 && campanasActivasSemana.length === 0 ? (
               <p className="text-center text-gray-400 text-sm py-6">No hay revisiones programadas</p>
             ) : (
               <div className="space-y-2">

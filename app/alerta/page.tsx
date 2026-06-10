@@ -59,11 +59,14 @@ function AlertaInner() {
               <div className="flex items-center gap-2 text-sm text-gray-700">📅 Añadida al calendario</div>
               <div className="flex items-center gap-2 text-sm text-gray-700">🔔 Recordatorio configurado — urgencia {urgencia}</div>
             </div>
-            <button onClick={() => router.push("/")} className="w-full py-3 bg-[#EEEDFE] border border-[#534AB7] text-[#3C3489] rounded-xl text-sm font-semibold">
+            <button onClick={() => router.push("/")} className="w-full py-3 bg-[#FDF0ED] border border-[#E8614A] text-[#E8614A] rounded-xl text-sm font-semibold hover:bg-[#F5C4BB] transition-all">
               + Crear otra alerta
             </button>
-            <button onClick={() => router.push("/calendario")} className="w-full py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">
-              Ver en calendario
+            <button onClick={() => {
+                const fecha = new Date(fechaAlerta);
+                router.push(`/calendario?dia=${fecha.getDate()}&mes=${fecha.getMonth() + 1}&anio=${fecha.getFullYear()}`);
+            }} className="w-full py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-100 transition-all">
+                Ver en calendario
             </button>
           </div>
         </div>
@@ -85,15 +88,15 @@ function AlertaInner() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Columna izquierda */}
           <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-            <div className="bg-[#EEEDFE] rounded-xl p-4 space-y-2">
-              <div className="flex gap-2 text-sm"><span className="text-[#534AB7] font-medium w-20">Persona</span><span className="text-[#3C3489]">{miembro || "—"}</span></div>
-              <div className="flex gap-2 text-sm"><span className="text-[#534AB7] font-medium w-20">Comunidad</span><span className="text-[#3C3489]">{comunidadCompleta || "—"}</span></div>
-              <div className="flex gap-2 text-sm"><span className="text-[#534AB7] font-medium w-20">Espacio</span><span className="text-[#3C3489]">{espacio || "—"}</span></div>
+            <div className="bg-[#FDF0ED] rounded-xl p-4 space-y-2">
+              <div className="flex gap-2 text-sm"><span className="text-[#E8614A] font-medium w-20">Persona</span><span className="text-[#C44A35]">{miembro || "—"}</span></div>
+              <div className="flex gap-2 text-sm"><span className="text-[#E8614A] font-medium w-20">Comunidad</span><span className="text-[#C44A35]">{comunidadCompleta || "—"}</span></div>
+              <div className="flex gap-2 text-sm"><span className="text-[#E8614A] font-medium w-20">Espacio</span><span className="text-[#C44A35]">{espacio || "—"}</span></div>
             </div>
 
             <div>
               <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Categoría</label>
-              <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none">
+              <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 appearance-none focus:outline-none focus:border-[#E8614A]">
                 <option value="">Selecciona categoría</option>
                 {CATEGORIAS.map((c) => <option key={c}>{c}</option>)}
               </select>
@@ -101,27 +104,27 @@ function AlertaInner() {
 
             <div>
               <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Descripción</label>
-              <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={3} placeholder="Describe qué hay que hacer…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none" />
+              <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={3} placeholder="Describe qué hay que hacer…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-[#E8614A]" />
             </div>
 
             {cargandoIA && (
-              <div className="border border-[#AFA9EC] rounded-xl p-3 text-xs text-[#534AB7]">✨ Analizando descripción...</div>
+              <div className="border border-[#F5C4BB] rounded-xl p-3 text-xs text-[#E8614A]">✨ Analizando descripción...</div>
             )}
 
             {subcategoriaIA && !cargandoIA && (
-              <div className="border border-[#AFA9EC] rounded-xl p-3">
+              <div className="border border-[#F5C4BB] rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm">✨</span>
-                  <span className="text-xs font-semibold text-[#534AB7] uppercase tracking-widest">Subcategoría sugerida por IA</span>
+                  <span className="text-xs font-semibold text-[#E8614A] uppercase tracking-widest">Subcategoría sugerida por IA</span>
                 </div>
                 {subcategoriaEditando ? (
                   <div className="flex gap-2">
-                    <input type="text" value={subcategoriaManual} onChange={(e) => setSubcategoriaManual(e.target.value)} placeholder="Escribe la subcategoría…" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700" />
+                    <input type="text" value={subcategoriaManual} onChange={(e) => setSubcategoriaManual(e.target.value)} placeholder="Escribe la subcategoría…" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]" />
                     <button onClick={() => { if (subcategoriaManual) { setSubcategoriaIA(subcategoriaManual); setSubcategoriaConfirmada(true); setSubcategoriaEditando(false); } }} className="text-xs px-3 py-2 rounded-xl bg-[#E1F5EE] border border-[#5DCAA5] text-[#0F6E56]">✓</button>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm font-medium px-3 py-1 rounded-full border ${subcategoriaConfirmada ? "bg-[#E1F5EE] border-[#5DCAA5] text-[#0F6E56]" : "bg-[#EEEDFE] border-[#AFA9EC] text-[#3C3489]"}`}>
+                    <span className={`text-sm font-medium px-3 py-1 rounded-full border ${subcategoriaConfirmada ? "bg-[#E1F5EE] border-[#5DCAA5] text-[#0F6E56]" : "bg-[#FDF0ED] border-[#F5C4BB] text-[#C44A35]"}`}>
                       {subcategoriaConfirmada ? "✓ " : ""}{subcategoriaIA}
                     </span>
                     {!subcategoriaConfirmada && (
@@ -156,12 +159,12 @@ function AlertaInner() {
 
             <div>
               <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Fecha para el calendario</label>
-              <input type="date" value={fechaAlerta} onChange={(e) => setFechaAlerta(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700" />
+              <input type="date" value={fechaAlerta} onChange={(e) => setFechaAlerta(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]" />
             </div>
 
             <div>
               <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Comentario para el siguiente</label>
-              <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3} placeholder="Contexto útil para quien lo resuelva…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none" />
+              <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3} placeholder="Contexto útil para quien lo resuelva…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-[#E8614A]" />
             </div>
 
             <button onClick={async () => {
@@ -170,12 +173,12 @@ function AlertaInner() {
                 comunidad: comunidadCompleta,
                 area, espacio, persona: miembro,
                 categoria, descripcion, urgencia, comentario,
-                estado: "Pendiente",
                 fecha_alerta: fechaAlerta || null,
+                fecha_creacion: new Date().toISOString(),
               });
               if (!error) setGuardado(true);
               else console.error(error);
-            }} disabled={!descripcion || !urgencia} className="w-full py-3 bg-[#534AB7] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#3C3489] transition-all">
+            }} disabled={!descripcion || !urgencia} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#C44A35] transition-all">
               Crear alerta
             </button>
           </div>

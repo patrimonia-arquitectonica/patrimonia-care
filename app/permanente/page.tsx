@@ -53,7 +53,7 @@ function PermanenteInner() {
       <AppLayout>
         <div className="p-6 max-w-lg">
           <div className="bg-white rounded-2xl border border-gray-100 p-8 flex flex-col items-center gap-4 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#E1F5EE] flex items-center justify-center text-2xl">✅</div>
+            <div className="w-14 h-14 rounded-full bg-[#FDF0ED] flex items-center justify-center text-2xl">✅</div>
             <h2 className="text-lg font-semibold text-gray-900">Cambio registrado</h2>
             <div className="w-full bg-gray-50 rounded-2xl p-4 text-left space-y-3 border border-gray-100">
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Inventario actualizado</p>
@@ -62,14 +62,14 @@ function PermanenteInner() {
               )}
               <div className="flex items-center gap-2 text-sm text-gray-700">✅ {nuevoNombre} ({nuevoProveedor}) → activo</div>
               <div className="border-t border-gray-100 pt-3 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-700">📧 Factura enviada a facturas@patrimoniacare.com</div>
+                <div className="flex items-center gap-2 text-sm text-gray-700">📧 Factura enviada a facturas@arca.com</div>
                 <div className="flex items-center gap-2 text-sm text-gray-700">🗄️ Registro guardado en historial</div>
               </div>
             </div>
-            <button onClick={() => router.push("/")} className="w-full py-3 bg-[#E1F5EE] border border-[#1D9E75] text-[#085041] rounded-xl text-sm font-semibold">
+            <button onClick={() => router.push("/")} className="w-full py-3 bg-[#FDF0ED] border border-[#E8614A] text-[#E8614A] rounded-xl text-sm font-semibold hover:bg-[#F5C4BB] transition-all">
               + Crear otro cambio
             </button>
-            <button onClick={() => router.push("/historial")} className="w-full py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">
+            <button onClick={() => router.push("/historial")} className="w-full py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-100 transition-all">
               Ver en historial
             </button>
           </div>
@@ -88,30 +88,30 @@ function PermanenteInner() {
             </h1>
             {(miembro || comunidad) && <p className="text-sm text-gray-400">{miembro}{comunidad ? ` · ${comunidadCompleta}` : ""}{espacio ? ` · ${espacio}` : ""}</p>}
           </div>
-          <span className="text-xs px-3 py-1 rounded-full bg-[#1D9E75] text-white font-medium">Permanente</span>
+          <span className="text-xs px-3 py-1 rounded-full bg-[#E8614A] text-white font-medium">Permanente</span>
         </div>
 
         {/* Barra de progreso */}
         <div className="flex gap-1 mb-6 max-w-xs">
           {[1, 2, 3].map((s) => (
-            <div key={s} className={`flex-1 h-1 rounded-full ${s < paso ? "bg-[#1D9E75]" : s === paso ? "bg-[#9FE1CB]" : "bg-gray-100"}`} />
+            <div key={s} className={`flex-1 h-1 rounded-full ${s < paso ? "bg-[#E8614A]" : s === paso ? "bg-[#F5C4BB]" : "bg-gray-100"}`} />
           ))}
         </div>
 
         <div className="max-w-2xl space-y-4">
           {paso === 1 && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-              <div className="bg-[#E1F5EE] rounded-xl p-4 space-y-2">
-                <div className="flex gap-2 text-sm"><span className="text-[#0F6E56] font-medium w-20">Persona</span><span className="text-[#085041]">{miembro || "—"}</span></div>
-                <div className="flex gap-2 text-sm"><span className="text-[#0F6E56] font-medium w-20">Comunidad</span><span className="text-[#085041]">{comunidadCompleta || "—"}</span></div>
-                <div className="flex gap-2 text-sm"><span className="text-[#0F6E56] font-medium w-20">Espacio</span><span className="text-[#085041]">{espacio || "—"}</span></div>
+              <div className="bg-[#FDF0ED] rounded-xl p-4 space-y-2">
+                <div className="flex gap-2 text-sm"><span className="text-[#E8614A] font-medium w-20">Persona</span><span className="text-[#C44A35]">{miembro || "—"}</span></div>
+                <div className="flex gap-2 text-sm"><span className="text-[#E8614A] font-medium w-20">Comunidad</span><span className="text-[#C44A35]">{comunidadCompleta || "—"}</span></div>
+                <div className="flex gap-2 text-sm"><span className="text-[#E8614A] font-medium w-20">Espacio</span><span className="text-[#C44A35]">{espacio || "—"}</span></div>
               </div>
 
               <div>
                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">¿Qué tipo de objeto?</label>
                 <div className="grid grid-cols-4 gap-2">
                   {TIPOS.map((t) => (
-                    <button key={t} onClick={() => setTipo(t)} className={`py-4 rounded-xl text-sm font-medium border transition-all flex flex-col items-center gap-2 ${tipo === t ? "bg-[#E1F5EE] border-[#1D9E75] text-[#085041]" : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
+                    <button key={t} onClick={() => setTipo(t)} className={`py-4 rounded-xl text-sm font-medium border transition-all flex flex-col items-center gap-2 ${tipo === t ? "bg-[#FDF0ED] border-[#E8614A] text-[#C44A35]" : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
                       <span className="text-2xl">{t === "Mobiliario" ? "🪑" : t === "Iluminación" ? "💡" : t === "Electrodoméstico" ? "🫧" : "🌿"}</span>
                       <span className="text-xs">{t}</span>
                     </button>
@@ -122,12 +122,12 @@ function PermanenteInner() {
               <div>
                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">¿Se trata de…?</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => setModo("cambio")} className={`py-4 rounded-xl text-sm font-medium border transition-all flex flex-col items-center gap-1 ${modo === "cambio" ? "bg-[#E1F5EE] border-[#1D9E75] text-[#085041]" : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
+                  <button onClick={() => setModo("cambio")} className={`py-4 rounded-xl text-sm font-medium border transition-all flex flex-col items-center gap-1 ${modo === "cambio" ? "bg-[#FDF0ED] border-[#E8614A] text-[#C44A35]" : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
                     <span className="text-2xl">🔄</span>
                     <span>Cambio</span>
                     <span className="text-xs font-normal">sustituyes algo</span>
                   </button>
-                  <button onClick={() => setModo("añadir")} className={`py-4 rounded-xl text-sm font-medium border transition-all flex flex-col items-center gap-1 ${modo === "añadir" ? "bg-[#E1F5EE] border-[#1D9E75] text-[#085041]" : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
+                  <button onClick={() => setModo("añadir")} className={`py-4 rounded-xl text-sm font-medium border transition-all flex flex-col items-center gap-1 ${modo === "añadir" ? "bg-[#FDF0ED] border-[#E8614A] text-[#C44A35]" : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
                     <span className="text-2xl">➕</span>
                     <span>Añadir</span>
                     <span className="text-xs font-normal">algo nuevo</span>
@@ -135,7 +135,7 @@ function PermanenteInner() {
                 </div>
               </div>
 
-              <button onClick={() => setPaso(modo === "cambio" ? 2 : 3)} disabled={!tipo} className="w-full py-3 bg-[#1D9E75] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#0F6E56] transition-all">
+              <button onClick={() => setPaso(modo === "cambio" ? 2 : 3)} disabled={!tipo} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#C44A35] transition-all">
                 Siguiente →
               </button>
             </div>
@@ -143,22 +143,22 @@ function PermanenteInner() {
 
           {paso === 2 && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-              <p className="text-xs text-gray-400">Inventario de <span className="text-[#085041] font-medium">{comunidadCompleta} · {espacio} · {tipo}</span></p>
+              <p className="text-xs text-gray-400">Inventario de <span className="text-[#C44A35] font-medium">{comunidadCompleta} · {espacio} · {tipo}</span></p>
               <div className="grid grid-cols-1 gap-2">
                 {objetos.map((obj) => (
-                  <button key={obj.nombre} onClick={() => setObjetoSeleccionado(obj)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${objetoSeleccionado?.nombre === obj.nombre ? "bg-[#E1F5EE] border-[#1D9E75]" : "bg-gray-50 border-gray-200 hover:border-[#1D9E75]"}`}>
+                  <button key={obj.nombre} onClick={() => setObjetoSeleccionado(obj)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${objetoSeleccionado?.nombre === obj.nombre ? "bg-[#FDF0ED] border-[#E8614A]" : "bg-gray-50 border-gray-200 hover:border-[#E8614A]"}`}>
                     <span className="text-lg">{tipo === "Mobiliario" ? "🪑" : tipo === "Iluminación" ? "💡" : tipo === "Electrodoméstico" ? "🫧" : "🌿"}</span>
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-800">{obj.nombre}</div>
                       <div className="text-xs text-gray-400">{obj.proveedor}</div>
                     </div>
-                    {objetoSeleccionado?.nombre === obj.nombre && <span className="text-[#1D9E75] text-lg">✓</span>}
+                    {objetoSeleccionado?.nombre === obj.nombre && <span className="text-[#E8614A] text-lg">✓</span>}
                   </button>
                 ))}
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setPaso(1)} className="px-4 py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">← Atrás</button>
-                <button onClick={() => setPaso(3)} disabled={!objetoSeleccionado} className="flex-1 py-3 bg-[#1D9E75] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#0F6E56] transition-all">
+                <button onClick={() => setPaso(3)} disabled={!objetoSeleccionado} className="flex-1 py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#C44A35] transition-all">
                   Siguiente → Añadir nuevo
                 </button>
               </div>
@@ -174,24 +174,24 @@ function PermanenteInner() {
                     <span className="text-xs text-[#791F1F]">Sustituye: <span className="font-medium">{objetoSeleccionado.nombre}</span> ({objetoSeleccionado.proveedor})</span>
                   </div>
                 )}
-                <div className="border border-dashed border-[#5DCAA5] rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-semibold text-[#0F6E56]">➕ Datos del nuevo objeto</p>
+                <div className="border border-dashed border-[#F5C4BB] rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-semibold text-[#E8614A]">➕ Datos del nuevo objeto</p>
                   <div>
                     <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Nombre</label>
-                    <input type="text" value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} placeholder="Ej: Sofá 3 plazas esquinero" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700" />
+                    <input type="text" value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} placeholder="Ej: Sofá 3 plazas esquinero" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Proveedor</label>
-                    <input type="text" value={nuevoProveedor} onChange={(e) => setNuevoProveedor(e.target.value)} placeholder="Ej: Westwing" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700" />
+                    <input type="text" value={nuevoProveedor} onChange={(e) => setNuevoProveedor(e.target.value)} placeholder="Ej: Westwing" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Precio aprox.</label>
-                    <input type="text" value={nuevoPrecio} onChange={(e) => setNuevoPrecio(e.target.value)} placeholder="Ej: 650" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700" />
+                    <input type="text" value={nuevoPrecio} onChange={(e) => setNuevoPrecio(e.target.value)} placeholder="Ej: 650" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]" />
                   </div>
                 </div>
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Comentario</label>
-                  <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={2} placeholder="Ej: el anterior estaba deteriorado…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none" />
+                  <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={2} placeholder="Ej: el anterior estaba deteriorado…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-[#E8614A]" />
                 </div>
               </div>
 
@@ -199,25 +199,25 @@ function PermanenteInner() {
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Factura / ticket</label>
                   <div className="grid grid-cols-2 gap-2 mb-2">
-                    <label className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 cursor-pointer">
+                    <label className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 cursor-pointer hover:bg-gray-100 transition-all">
                       📷<span>Foto ticket</span>
                       <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setFoto(e.target.files[0]); }} />
                     </label>
-                    <label className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 cursor-pointer">
+                    <label className="flex flex-col items-center gap-1 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-xs text-gray-500 cursor-pointer hover:bg-gray-100 transition-all">
                       📄<span>Subir PDF</span>
                       <input type="file" accept=".pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) setFoto(e.target.files[0]); }} />
                     </label>
                   </div>
                   {foto && (
-                    <div className="flex items-center gap-2 bg-[#E1F5EE] border border-[#5DCAA5] rounded-xl px-3 py-2 mb-2">
+                    <div className="flex items-center gap-2 bg-[#FDF0ED] border border-[#F5C4BB] rounded-xl px-3 py-2 mb-2">
                       <span className="text-sm">📎</span>
-                      <span className="text-xs text-[#085041] flex-1 truncate">{foto.name}</span>
+                      <span className="text-xs text-[#C44A35] flex-1 truncate">{foto.name}</span>
                       <button onClick={() => setFoto(null)} className="text-xs text-gray-400">✕</button>
                     </div>
                   )}
                   <div className="flex items-center gap-2 bg-[#E1F5EE] border border-[#5DCAA5] rounded-xl px-3 py-2">
                     <span className="text-sm">📧</span>
-                    <span className="text-xs text-[#085041]">Se enviará a facturas@patrimoniacare.com</span>
+                    <span className="text-xs text-[#085041]">Se enviará a facturas@arca.com</span>
                   </div>
                 </div>
 
@@ -250,7 +250,7 @@ function PermanenteInner() {
                     });
                     if (!error) setPaso(4);
                     else console.error(error);
-                  }} disabled={!nuevoNombre} className="flex-1 py-3 bg-[#1D9E75] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#0F6E56] transition-all">
+                  }} disabled={!nuevoNombre} className="flex-1 py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#C44A35] transition-all">
                     Guardar cambio
                   </button>
                 </div>
