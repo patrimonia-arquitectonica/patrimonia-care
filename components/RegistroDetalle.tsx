@@ -15,6 +15,7 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
   const [reprogramando, setReprogramando] = useState(false);
   const [nuevaFecha, setNuevaFecha] = useState("");
   const [fechaRevision, setFechaRevision] = useState("");
+  const [accionPuntual, setAccionPuntual] = useState(false);
   const [resueltoPor, setResueltoPor] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [tieneHijo, setTieneHijo] = useState(false);
@@ -24,7 +25,6 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
   const esImagen = (url: string) => /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
   const esResuelto = r.estado === "Resuelto" || r.estado === "Hecho";
 
-  // Comprobar si tiene registro hijo
   useEffect(() => {
     const comprobar = async () => {
       const { data } = await supabase.from("Registros").select("id").eq("ref_padre", r.id).limit(1);
@@ -34,6 +34,11 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
     comprobar();
   }, [r.id]);
 
+  // Limpiar fecha si marcan acción puntual
+  useEffect(() => {
+    if (accionPuntual) setFechaRevision("");
+  }, [accionPuntual]);
+
   const badgeEstado = (estado: string) => {
     if (estado === "Resuelto" || estado === "Hecho") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#E1F5EE] text-[#085041] font-medium">Resuelto</span>;
     if (estado === "Pendiente") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#A32D2D] font-medium">Pendiente</span>;
@@ -41,12 +46,14 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
   };
 
   const marcarResuelto = async () => {
-    if (!fechaRevision || !resueltoPor) return;
+    if (!resueltoPor) return;
+    if (!accionPuntual && !fechaRevision) return;
     setGuardando(true);
     await supabase.from("Registros").update({
       estado: "Resuelto",
       fecha_arreglo: new Date().toISOString().split("T")[0],
-      fecha_revision: fechaRevision,
+      fecha_revision: accionPuntual ? null : fechaRevision,
+      accion_puntual: accionPuntual,
       resuelto_por: resueltoPor,
     }).eq("id", r.id);
     onActualizar?.();
@@ -68,12 +75,11 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
   };
 
   const volverAtras = () => {
-    if (resolviendoRapido) { setResolviendoRapido(false); setFechaRevision(""); setResueltoPor(""); }
+    if (resolviendoRapido) { setResolviendoRapido(false); setFechaRevision(""); setResueltoPor(""); setAccionPuntual(false); }
     else if (reprogramando) { setReprogramando(false); setNuevaFecha(""); }
     else { onVolver(); }
   };
 
-  // ref_padre a usar para el hijo: si r tiene ref_padre, usa ese; si no, usa r.id
   const refPadreParaHijo = r.ref_padre || r.id;
 
   return (
@@ -85,7 +91,7 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
         </div>
       )}
 
-      <div className="p-6 max-w-lg">
+      <div className="p-4 md:p-6 max-w-lg">
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center gap-3">
             <button onClick={volverAtras} className="text-gray-400 text-lg hover:text-gray-600">←</button>
@@ -108,7 +114,7 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
                 ["Tipo", r.tipo === "mantenimiento" ? "🔧 Mantenimiento" : "🪑 Permanente"],
                 ["Fecha creación", r.fecha_creacion ? new Date(r.fecha_creacion).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"],
                 ["Fecha arreglo", r.fecha_arreglo ? new Date(r.fecha_arreglo).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"],
-                ["Próx. revisión", r.fecha_revision ? new Date(r.fecha_revision).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"],
+                ["Próx. revisión", r.accion_puntual ? "⚡ Acción puntual" : r.fecha_revision ? new Date(r.fecha_revision).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "—"],
               ].filter(([, val]) => val && val !== "—").map(([lbl, val]) => (
                 <div key={lbl} className="flex justify-between text-sm border-b border-[#F5C4BB] pb-2 last:border-0 last:pb-0">
                   <span className="text-[#E8614A]">{lbl}</span>
@@ -180,6 +186,8 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
             ) : resolviendoRapido ? (
               <div className="space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Marcar como resuelto</p>
+
+                {/* Quién lo resolvió */}
                 <div>
                   <p className="text-xs text-gray-400 mb-2">¿Quién lo resolvió? <span className="text-[#E8614A]">*</span></p>
                   <div className="space-y-1">
@@ -191,13 +199,50 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
                     ))}
                   </div>
                 </div>
+
+                {/* Próxima revisión + acción puntual */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Próxima revisión <span className="text-[#E8614A]">*</span></p>
-                  <input type="date" value={fechaRevision} onChange={(e) => setFechaRevision(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#E8614A]" />
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-400">
+                      Próxima revisión {!accionPuntual && <span className="text-[#E8614A]">*</span>}
+                    </p>
+                    <button
+                      onClick={() => setAccionPuntual(!accionPuntual)}
+                      className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
+                        accionPuntual
+                          ? "bg-[#FDF0ED] border-[#E8614A] text-[#C44A35] font-medium"
+                          : "bg-gray-50 border-gray-200 text-gray-400 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${accionPuntual ? "bg-[#E8614A] border-[#E8614A]" : "border-gray-300"}`}>
+                        {accionPuntual && <span className="text-white text-[9px] leading-none">✓</span>}
+                      </span>
+                      Acción puntual
+                    </button>
+                  </div>
+
+                  {accionPuntual ? (
+                    <div className="flex items-center gap-2 bg-[#FDF0ED] border border-[#F5C4BB] rounded-xl px-4 py-3">
+                      <span className="text-sm">⚡</span>
+                      <span className="text-xs text-[#C44A35]">Esta acción no requiere seguimiento futuro</span>
+                    </div>
+                  ) : (
+                    <input
+                      type="date"
+                      value={fechaRevision}
+                      onChange={(e) => setFechaRevision(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#E8614A]"
+                    />
+                  )}
                 </div>
+
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => { setResolviendoRapido(false); setFechaRevision(""); setResueltoPor(""); }} className="py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
-                  <button onClick={marcarResuelto} disabled={!fechaRevision || !resueltoPor || guardando} className="py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40 transition-all">
+                  <button onClick={() => { setResolviendoRapido(false); setFechaRevision(""); setResueltoPor(""); setAccionPuntual(false); }} className="py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
+                  <button
+                    onClick={marcarResuelto}
+                    disabled={!resueltoPor || (!accionPuntual && !fechaRevision) || guardando}
+                    className="py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40 transition-all"
+                  >
                     {guardando ? "Guardando..." : "✓ Confirmar"}
                   </button>
                 </div>
@@ -235,4 +280,3 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
     </>
   );
 }
-
