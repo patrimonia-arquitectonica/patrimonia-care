@@ -18,6 +18,7 @@ function MantenimientoInner() {
   const [categoria, setCategoria] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fecha, setFecha] = useState("");
+  const [accionPuntual, setAccionPuntual] = useState(false);
   const [comentario, setComentario] = useState("");
   const [guardado, setGuardado] = useState(false);
   const [subcategoriaIA, setSubcategoriaIA] = useState<string | null>(null);
@@ -63,10 +64,15 @@ function MantenimientoInner() {
     cargar();
   }, [subcategoriaIA]);
 
+  // Si marcan acción puntual, limpiamos la fecha
+  useEffect(() => {
+    if (accionPuntual) setFecha("");
+  }, [accionPuntual]);
+
   if (guardado) {
     return (
       <AppLayout>
-        <div className="p-6 max-w-lg">
+        <div className="p-4 md:p-6 max-w-lg">
           <div className="bg-white rounded-2xl border border-gray-100 p-8 flex flex-col items-center gap-4 text-center">
             <div className="w-14 h-14 rounded-full bg-[#FDF0ED] flex items-center justify-center text-2xl">✅</div>
             <h2 className="text-lg font-semibold text-gray-900">Registro guardado</h2>
@@ -74,7 +80,10 @@ function MantenimientoInner() {
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Acciones realizadas</p>
               {resuelve && <div className="flex items-center gap-2 text-sm text-gray-700">✅ Registro anterior marcado como resuelto</div>}
               {ref_alerta && <div className="flex items-center gap-2 text-sm text-gray-700">🔔 Alerta marcada como resuelta</div>}
-              {fecha && <div className="flex items-center gap-2 text-sm text-gray-700">📅 Próxima revisión: {new Date(fecha).toLocaleDateString("es-ES")}</div>}
+              {accionPuntual
+                ? <div className="flex items-center gap-2 text-sm text-gray-700">⚡ Acción puntual — sin próxima revisión</div>
+                : fecha && <div className="flex items-center gap-2 text-sm text-gray-700">📅 Próxima revisión: {new Date(fecha).toLocaleDateString("es-ES")}</div>
+              }
               <div className="flex items-center gap-2 text-sm text-gray-700">📧 Factura enviada a facturas@arca.com</div>
               <div className="flex items-center gap-2 text-sm text-gray-700">🗄️ Registro guardado en historial</div>
             </div>
@@ -92,7 +101,7 @@ function MantenimientoInner() {
 
   return (
     <AppLayout>
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Nuevo mantenimiento</h1>
@@ -180,11 +189,40 @@ function MantenimientoInner() {
                 )}
               </div>
 
+              {/* Siguiente revisión + acción puntual */}
               <div>
-                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">
-                  Siguiente revisión <span className="text-[#E8614A]">*</span>
-                </label>
-                <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]" />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                    Siguiente revisión {!accionPuntual && <span className="text-[#E8614A]">*</span>}
+                  </label>
+                  <button
+                    onClick={() => setAccionPuntual(!accionPuntual)}
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
+                      accionPuntual
+                        ? "bg-[#FDF0ED] border-[#E8614A] text-[#C44A35] font-medium"
+                        : "bg-gray-50 border-gray-200 text-gray-400 hover:border-gray-300"
+                    }`}
+                  >
+                    <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${accionPuntual ? "bg-[#E8614A] border-[#E8614A]" : "border-gray-300"}`}>
+                      {accionPuntual && <span className="text-white text-[9px] leading-none">✓</span>}
+                    </span>
+                    Acción puntual
+                  </button>
+                </div>
+
+                {accionPuntual ? (
+                  <div className="flex items-center gap-2 bg-[#FDF0ED] border border-[#F5C4BB] rounded-xl px-4 py-3">
+                    <span className="text-sm">⚡</span>
+                    <span className="text-xs text-[#C44A35]">Esta acción no requiere seguimiento futuro</span>
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]"
+                  />
+                )}
               </div>
 
               <div>
@@ -224,11 +262,10 @@ function MantenimientoInner() {
               </div>
 
               <button onClick={async () => {
-                if (!fecha) { alert("La fecha de siguiente revisión es obligatoria"); return; }
+                if (!accionPuntual && !fecha) { alert("Pon una fecha de siguiente revisión, o marca como acción puntual"); return; }
                 setSubiendo(true);
                 const ref = `MNT-${Date.now()}`;
 
-                // Subir facturas
                 let urlsFactura: string[] = [];
                 if (fotos.length > 0) {
                   for (const f of fotos) {
@@ -240,7 +277,6 @@ function MantenimientoInner() {
                   }
                 }
 
-                // Subir fotos del arreglo
                 let urlsFotos: string[] = [];
                 if (fotosArreglo.length > 0) {
                   for (const f of fotosArreglo) {
@@ -252,7 +288,6 @@ function MantenimientoInner() {
                   }
                 }
 
-                // Crear nuevo registro con ref_padre y ref_alerta
                 const { error } = await supabase.from("Registros").insert({
                   tipo: "mantenimiento",
                   comunidad: `${comunidad}${area ? ` · ${area}` : ""}`,
@@ -263,13 +298,13 @@ function MantenimientoInner() {
                   gasto: null,
                   foto_url: urlsFactura[0] || null,
                   fotos_arreglo: urlsFotos,
-                  fecha_revision: fecha || null,
+                  fecha_revision: accionPuntual ? null : (fecha || null),
+                  accion_puntual: accionPuntual,
                   fecha_creacion: new Date().toISOString(),
                   ref_padre: ref_padre || null,
                   ref_alerta: ref_alerta || null,
                 });
 
-                // Marcar registro anterior como resuelto
                 if (!error && resuelve) {
                   await supabase.from("Registros").update({
                     estado: "Resuelto",
@@ -278,7 +313,6 @@ function MantenimientoInner() {
                   }).eq("id", resuelve);
                 }
 
-                // Marcar alerta como resuelta y con tiene_registro: true
                 if (!error && ref_alerta) {
                   await supabase.from("alertas").update({
                     resuelta: true,
