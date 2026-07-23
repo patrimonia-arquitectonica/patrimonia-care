@@ -187,10 +187,18 @@ function CampanasInner() {
     return { hechos, total: targetsPendientes.length };
   };
 
+  // Una instancia sigue "activa" (editable) desde que arranca su semana
+  // hasta que se completa de verdad, aunque haya pasado la fecha de fin.
+  // fecha_instancia solo avanza cuando todos los targets están hechos,
+  // así que bloquear por domingo dejaba campañas atrasadas sin poder completarse.
   const esInstanciaActiva = (campana: Campana) => {
     const lunes = getLunes(new Date(campana.fecha_instancia));
+    return hoy >= lunes;
+  };
+
+  const esInstanciaAtrasada = (campana: Campana) => {
     const domingo = getDomingo(new Date(campana.fecha_instancia));
-    return hoy >= lunes && hoy <= domingo;
+    return hoy > domingo;
   };
 
   const getSemanasFuturas = (campana: Campana, cantidad = 6) => {
@@ -407,6 +415,7 @@ function CampanasInner() {
     const regsInstancia = getRegistrosInstancia(campanaSeleccionada);
     const { hechos, total } = getProgreso(campanaSeleccionada);
     const activa = esInstanciaActiva(campanaSeleccionada);
+    const atrasada = esInstanciaAtrasada(campanaSeleccionada);
     const semanasFuturas = getSemanasFuturas(campanaSeleccionada);
 
     const porComunidad: Record<string, typeof targetsPendientes> = {};
@@ -519,6 +528,9 @@ function CampanasInner() {
               <h1 className="text-xl font-semibold text-gray-900">{campanaSeleccionada.nombre}</h1>
               <p className="text-sm text-gray-400">{campanaSeleccionada.categoria} · cada {campanaSeleccionada.frecuencia_dias} días</p>
             </div>
+            {atrasada && total > hechos && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#A32D2D] font-medium">⏰ Atrasada</span>
+            )}
             {badgeProgreso(hechos, total)}
           </div>
 
@@ -527,7 +539,7 @@ function CampanasInner() {
               <div className="bg-white rounded-2xl border border-gray-100 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                    {activa ? "Semana activa" : "Próxima semana"}
+                    {atrasada ? "Semana atrasada" : activa ? "Semana activa" : "Próxima semana"}
                   </p>
                   <p className="text-sm font-semibold text-gray-700">{hechos} de {total} completados</p>
                 </div>
@@ -623,6 +635,7 @@ function CampanasInner() {
               const { hechos, total } = getProgreso(c);
               const pct = total === 0 ? 0 : Math.round((hechos / total) * 100);
               const activa = esInstanciaActiva(c);
+              const atrasada = esInstanciaAtrasada(c) && hechos < total;
               const lunes = getLunes(new Date(c.fecha_instancia));
               const domingo = getDomingo(new Date(c.fecha_instancia));
               return (
@@ -631,7 +644,11 @@ function CampanasInner() {
                     <div>
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="text-sm font-semibold text-gray-900">{c.nombre}</p>
-                        {activa && <span className="text-xs px-2 py-0.5 rounded-full bg-[#E8614A] text-white font-medium">Esta semana</span>}
+                        {atrasada ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#A32D2D] font-medium">⏰ Atrasada</span>
+                        ) : activa ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#E8614A] text-white font-medium">Esta semana</span>
+                        ) : null}
                       </div>
                       <p className="text-xs text-gray-400">{c.categoria} · cada {c.frecuencia_dias} días · {lunes.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} — {domingo.toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</p>
                     </div>
