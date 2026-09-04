@@ -20,6 +20,10 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
   const [guardando, setGuardando] = useState(false);
   const [tieneHijo, setTieneHijo] = useState(false);
   const [cargandoHijo, setCargandoHijo] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editandoDescripcion, setEditandoDescripcion] = useState(false);
+  const [descripcionActual, setDescripcionActual] = useState(r.descripcion || "");
+  const [descripcionEditada, setDescripcionEditada] = useState("");
 
   const fotosArreglo: string[] = Array.isArray(r.fotos_arreglo) ? r.fotos_arreglo : [];
   const esImagen = (url: string) => /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
@@ -45,31 +49,51 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
     return null;
   };
 
+  const guardarDescripcion = async () => {
+    if (!descripcionEditada.trim()) return;
+    const { error: err } = await supabase.from("Registros").update({ descripcion: descripcionEditada.trim() }).eq("id", r.id);
+    if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); return; }
+    setError(null);
+    setDescripcionActual(descripcionEditada.trim());
+    setEditandoDescripcion(false);
+    onActualizar?.();
+  };
+
   const marcarResuelto = async () => {
     if (!resueltoPor) return;
     if (!accionPuntual && !fechaRevision) return;
     setGuardando(true);
-    await supabase.from("Registros").update({
+    const { error: err } = await supabase.from("Registros").update({
       estado: "Resuelto",
       fecha_arreglo: new Date().toISOString().split("T")[0],
       fecha_revision: accionPuntual ? null : fechaRevision,
       accion_puntual: accionPuntual,
       resuelto_por: resueltoPor,
     }).eq("id", r.id);
+    if (err) {
+      setError("No se pudo guardar. Inténtalo de nuevo.");
+      setGuardando(false);
+      return;
+    }
+    setError(null);
     onActualizar?.();
     onVolver();
     setGuardando(false);
   };
 
   const marcarPendiente = async () => {
-    await supabase.from("Registros").update({ estado: "Pendiente", fecha_arreglo: null, resuelto_por: null }).eq("id", r.id);
+    const { error: err } = await supabase.from("Registros").update({ estado: "Pendiente", fecha_arreglo: null, resuelto_por: null }).eq("id", r.id);
+    if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); return; }
+    setError(null);
     onActualizar?.();
     onVolver();
   };
 
   const reprogramar = async () => {
     if (!nuevaFecha) return;
-    await supabase.from("Registros").update({ fecha_revision: nuevaFecha }).eq("id", r.id);
+    const { error: err } = await supabase.from("Registros").update({ fecha_revision: nuevaFecha }).eq("id", r.id);
+    if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); return; }
+    setError(null);
     onActualizar?.();
     onVolver();
   };
@@ -103,6 +127,10 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
           </div>
 
           <div className="px-5 py-5 space-y-4">
+            {error && (
+              <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{error}</div>
+            )}
+
             <div className="bg-[#FDF0ED] rounded-2xl p-4 space-y-2">
               {[
                 ["Creado por", r.persona],
@@ -123,10 +151,25 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
               ))}
             </div>
 
-            {r.descripcion && (
+            {(descripcionActual || editandoDescripcion) && (
               <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">📝 Descripción</p>
-                <p className="text-sm text-gray-700">{r.descripcion}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">📝 Descripción</p>
+                  {!editandoDescripcion && (
+                    <button onClick={() => { setDescripcionEditada(descripcionActual); setEditandoDescripcion(true); }} className="text-xs text-[#E8614A] hover:underline">✎ Editar</button>
+                  )}
+                </div>
+                {editandoDescripcion ? (
+                  <div className="space-y-2">
+                    <textarea value={descripcionEditada} onChange={(e) => setDescripcionEditada(e.target.value)} rows={3} className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 resize-none focus:outline-none focus:border-[#E8614A]" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => setEditandoDescripcion(false)} className="py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs">Cancelar</button>
+                      <button onClick={guardarDescripcion} disabled={!descripcionEditada.trim()} className="py-2 bg-[#E8614A] text-white rounded-lg text-xs font-semibold disabled:opacity-40">Guardar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-700">{descripcionActual}</p>
+                )}
               </div>
             )}
 

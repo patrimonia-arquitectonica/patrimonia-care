@@ -38,6 +38,7 @@ export default function Maestras() {
   const [nuevaViviendaEdit, setNuevaViviendaEdit] = useState("");
   const [guardandoMiembro, setGuardandoMiembro] = useState(false);
   const [guardandoComunidad, setGuardandoComunidad] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const cargar = async () => {
@@ -57,7 +58,9 @@ export default function Maestras() {
   }, []);
 
   const eliminarMiembro = async (id: string) => {
-    await supabase.from("miembros").delete().eq("id", id);
+    const { error: err } = await supabase.from("miembros").delete().eq("id", id);
+    if (err) { setError("No se pudo eliminar. Inténtalo de nuevo."); return; }
+    setError(null);
     setMiembros(miembros.filter((m) => m.id !== id));
   };
 
@@ -95,32 +98,42 @@ export default function Maestras() {
   };
 
   const eliminarEspacio = async (id: string) => {
-    await supabase.from("espacios").delete().eq("id", id);
+    const { error: err } = await supabase.from("espacios").delete().eq("id", id);
+    if (err) { setError("No se pudo eliminar. Inténtalo de nuevo."); return; }
+    setError(null);
     setEspacios(espacios.filter((e) => e.id !== id));
   };
 
   const eliminarCategoria = async (id: string) => {
-    await supabase.from("categorias").delete().eq("id", id);
+    const { error: err } = await supabase.from("categorias").delete().eq("id", id);
+    if (err) { setError("No se pudo eliminar. Inténtalo de nuevo."); return; }
+    setError(null);
     setCategorias(categorias.filter((c) => c.id !== id));
   };
 
   const añadirEspacio = async () => {
     if (!nuevoEspacio) return;
-    const { data } = await supabase.from("espacios").insert({ nombre: nuevoEspacio }).select().single();
+    const { data, error: err } = await supabase.from("espacios").insert({ nombre: nuevoEspacio }).select().single();
+    if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); return; }
+    setError(null);
     if (data) setEspacios([...espacios, data]);
     setNuevoEspacio(""); setMostrarFormEspacio(false);
   };
 
   const añadirCategoria = async () => {
     if (!nuevaCategoria) return;
-    const { data } = await supabase.from("categorias").insert({ nombre: nuevaCategoria }).select().single();
+    const { data, error: err } = await supabase.from("categorias").insert({ nombre: nuevaCategoria }).select().single();
+    if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); return; }
+    setError(null);
     if (data) setCategorias([...categorias, data]);
     setNuevaCategoria(""); setMostrarFormCategoria(false);
   };
 
   const añadirMiembro = async () => {
     if (!nuevoMiembro.nombre || !nuevoMiembro.iniciales) return;
-    const { data } = await supabase.from("miembros").insert(nuevoMiembro).select().single();
+    const { data, error: err } = await supabase.from("miembros").insert(nuevoMiembro).select().single();
+    if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); return; }
+    setError(null);
     if (data) setMiembros([...miembros, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
     setNuevoMiembro({ nombre: "", iniciales: "", rol: "Técnico", color: "purple" });
     setMostrarFormMiembro(false);
@@ -128,7 +141,9 @@ export default function Maestras() {
 
   const añadirComunidad = async () => {
     if (!nuevaComunidad.nombre) return;
-    const { data } = await supabase.from("comunidades").insert({ ...nuevaComunidad }).select().single();
+    const { data, error: err } = await supabase.from("comunidades").insert({ ...nuevaComunidad }).select().single();
+    if (err) { setError("No se pudo guardar. Inténtalo de nuevo."); return; }
+    setError(null);
     if (data) setComunidades([...comunidades, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
     setNuevaComunidad({ nombre: "", color: "#378ADD", prime: false, zonas_comunes: true, pisos: [] });
     setNuevaVivienda(""); setMostrarFormComunidad(false);
@@ -153,6 +168,9 @@ export default function Maestras() {
               <h1 className="text-base font-semibold text-gray-900 flex-1">Editar miembro</h1>
             </div>
             <div className="px-5 py-5 space-y-4">
+              {error && (
+                <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{error}</div>
+              )}
               <div className="flex flex-col items-center gap-2 mb-2">
                 <div className={`w-14 h-14 rounded-full ${colorAvatar(editandoMiembro.color)} flex items-center justify-center text-lg font-semibold`}>{editandoMiembro.iniciales}</div>
               </div>
@@ -210,6 +228,9 @@ export default function Maestras() {
               </div>
             </div>
             <div className="px-5 py-5 space-y-4">
+              {error && (
+                <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{error}</div>
+              )}
 
               <div>
                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Nombre</label>
@@ -250,7 +271,9 @@ export default function Maestras() {
               </div>
 
               <button onClick={async () => {
-                await supabase.from("comunidades").delete().eq("id", editandoComunidad.id);
+                const { error: err } = await supabase.from("comunidades").delete().eq("id", editandoComunidad.id);
+                if (err) { setError("No se pudo eliminar. Inténtalo de nuevo."); return; }
+                setError(null);
                 setComunidades(comunidades.filter((c) => c.id !== editandoComunidad.id));
                 setEditandoComunidad(null);
               }} className="w-full py-3 bg-white border border-[#F09595] text-[#A32D2D] rounded-xl text-sm hover:bg-red-50 transition-all">
@@ -277,6 +300,10 @@ export default function Maestras() {
           <h1 className="text-xl font-semibold text-gray-900">Listas maestras</h1>
           <p className="text-sm text-gray-400">Configuración base</p>
         </div>
+
+        {error && (
+          <div className="mb-4 bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{error}</div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 

@@ -11,18 +11,20 @@ function AlertaInner() {
   const comunidad = searchParams.get("comunidad") || "";
   const area = searchParams.get("area") || "";
   const espacio = searchParams.get("espacio") || "";
+  const fechaParam = searchParams.get("fecha") || "";
 
   const [categoria, setCategoria] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [urgencia, setUrgencia] = useState("");
   const [comentario, setComentario] = useState("");
-  const [fechaAlerta, setFechaAlerta] = useState("");
+  const [fechaAlerta, setFechaAlerta] = useState(fechaParam);
   const [guardado, setGuardado] = useState(false);
   const [subcategoriaIA, setSubcategoriaIA] = useState<string | null>(null);
   const [cargandoIA, setCargandoIA] = useState(false);
   const [subcategoriaConfirmada, setSubcategoriaConfirmada] = useState(false);
   const [subcategoriaEditando, setSubcategoriaEditando] = useState(false);
   const [subcategoriaManual, setSubcategoriaManual] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const CATEGORIAS = ["Albañilería", "Carpintería", "Fontanería", "Limpieza", "Electricidad"];
   const comunidadCompleta = `${comunidad}${area ? ` · ${area}` : ""}`;
@@ -57,7 +59,7 @@ function AlertaInner() {
             <p className="text-sm text-gray-400">Aparecerá en el calendario el día seleccionado</p>
             <div className="w-full bg-gray-50 rounded-2xl p-4 text-left space-y-3 border border-gray-100">
               <div className="flex items-center gap-2 text-sm text-gray-700">📅 Añadida al calendario</div>
-              <div className="flex items-center gap-2 text-sm text-gray-700">🔔 Recordatorio configurado — urgencia {urgencia}</div>
+              <div className="flex items-center gap-2 text-sm text-gray-700">🔔 Urgencia: {urgencia}</div>
             </div>
             <button onClick={() => router.push("/")} className="w-full py-3 bg-[#FDF0ED] border border-[#E8614A] text-[#E8614A] rounded-xl text-sm font-semibold hover:bg-[#F5C4BB] transition-all">
               + Crear otra alerta
@@ -167,8 +169,12 @@ function AlertaInner() {
               <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3} placeholder="Contexto útil para quien lo resuelva…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-[#E8614A]" />
             </div>
 
+            {error && (
+              <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{error}</div>
+            )}
+
             <button onClick={async () => {
-              const { error } = await supabase.from("alertas").insert({
+              const { error: err } = await supabase.from("alertas").insert({
                 tipo: "mantenimiento",
                 comunidad: comunidadCompleta,
                 area, espacio, persona: miembro,
@@ -176,8 +182,8 @@ function AlertaInner() {
                 fecha_alerta: fechaAlerta || null,
                 fecha_creacion: new Date().toISOString(),
               });
-              if (!error) setGuardado(true);
-              else console.error(error);
+              if (!err) { setError(null); setGuardado(true); }
+              else setError("No se pudo crear la alerta. Inténtalo de nuevo.");
             }} disabled={!descripcion || !urgencia} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-[#C44A35] transition-all">
               Crear alerta
             </button>

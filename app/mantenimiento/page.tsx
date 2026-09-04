@@ -31,6 +31,7 @@ function MantenimientoInner() {
   const [fotos, setFotos] = useState<File[]>([]);
   const [fotosArreglo, setFotosArreglo] = useState<File[]>([]);
   const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const CATEGORIAS = ["Albañilería", "Carpintería", "Fontanería", "Limpieza", "Electricidad"];
 
@@ -261,9 +262,14 @@ function MantenimientoInner() {
                 <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={2} placeholder="Ej: revisar también la junta de la ducha…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-[#E8614A]" />
               </div>
 
+              {error && (
+                <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{error}</div>
+              )}
+
               <button onClick={async () => {
                 if (!accionPuntual && !fecha) { alert("Pon una fecha de siguiente revisión, o marca como acción puntual"); return; }
                 setSubiendo(true);
+                setError(null);
                 const ref = `MNT-${Date.now()}`;
 
                 let urlsFactura: string[] = [];
@@ -274,6 +280,11 @@ function MantenimientoInner() {
                     const res = await fetch("/api/upload", { method: "POST", body: fd });
                     const data = await res.json();
                     if (data.url) urlsFactura.push(data.url);
+                    else {
+                      setError("No se pudo subir la factura. Comprueba tu conexión e inténtalo de nuevo.");
+                      setSubiendo(false);
+                      return;
+                    }
                   }
                 }
 
@@ -285,10 +296,15 @@ function MantenimientoInner() {
                     const res = await fetch("/api/upload", { method: "POST", body: fd });
                     const data = await res.json();
                     if (data.url) urlsFotos.push(data.url);
+                    else {
+                      setError("No se pudo subir la foto. Comprueba tu conexión e inténtalo de nuevo.");
+                      setSubiendo(false);
+                      return;
+                    }
                   }
                 }
 
-                const { error } = await supabase.from("Registros").insert({
+                const { error: errInsert } = await supabase.from("Registros").insert({
                   tipo: "mantenimiento",
                   comunidad: `${comunidad}${area ? ` · ${area}` : ""}`,
                   area, espacio, persona: miembro, categoria,
@@ -305,7 +321,7 @@ function MantenimientoInner() {
                   ref_alerta: ref_alerta || null,
                 });
 
-                if (!error && resuelve) {
+                if (!errInsert && resuelve) {
                   await supabase.from("Registros").update({
                     estado: "Resuelto",
                     resuelto_por: miembro,
@@ -313,7 +329,7 @@ function MantenimientoInner() {
                   }).eq("id", resuelve);
                 }
 
-                if (!error && ref_alerta) {
+                if (!errInsert && ref_alerta) {
                   await supabase.from("alertas").update({
                     resuelta: true,
                     tiene_registro: true,
@@ -321,14 +337,16 @@ function MantenimientoInner() {
                   }).eq("id", ref_alerta);
                 }
 
-                if (!error) {
+                if (!errInsert) {
                   await fetch("/api/email", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ ref, persona: miembro, comunidad: `${comunidad}${area ? ` · ${area}` : ""}`, espacio, descripcion, tipo: "Mantenimiento", fotoUrl: urlsFactura[0] || null }),
                   });
                   setGuardado(true);
-                } else { console.error(error); }
+                } else {
+                  setError("No se pudo guardar el registro. Inténtalo de nuevo.");
+                }
                 setSubiendo(false);
               }} disabled={subiendo} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold hover:bg-[#C44A35] transition-all disabled:opacity-40">
                 {subiendo ? "Guardando..." : "Guardar registro"}

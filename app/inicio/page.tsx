@@ -1,11 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
-export default function Inicio() {
+function InicioInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fecha = searchParams.get("fecha") || "";
   const [miembros, setMiembros] = useState<any[]>([]);
   const [comunidades, setComunidades] = useState<any[]>([]);
   const [espacios, setEspacios] = useState<any[]>([]);
@@ -122,6 +124,7 @@ export default function Inicio() {
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <button onClick={() => {
                   const params = new URLSearchParams({ miembro, comunidad, area, espacio });
+                  if (fecha) params.set("fecha", fecha);
                   router.push(`/alerta?${params.toString()}`);
                 }} disabled={!puedeActuar} className="w-full px-4 py-3 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold hover:bg-[#F5E0C0] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                   Crear alerta
@@ -150,5 +153,13 @@ export default function Inicio() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+export default function Inicio() {
+  return (
+    <Suspense>
+      <InicioInner />
+    </Suspense>
   );
 }

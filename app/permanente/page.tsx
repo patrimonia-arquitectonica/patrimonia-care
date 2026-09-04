@@ -48,6 +48,7 @@ function PermanenteInner() {
   const [comentario, setComentario] = useState("");
   const [foto, setFoto] = useState<File | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const comunidadCompleta = `${comunidad}${area ? ` · ${area}` : ""}`;
 
@@ -267,11 +268,16 @@ function PermanenteInner() {
                   </div>
                 </div>
 
+                {error && (
+                  <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{error}</div>
+                )}
+
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setPaso(modo === "cambio" ? 2 : 1)} className="px-4 py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">← Atrás</button>
                   <button
                     onClick={async () => {
                       setGuardando(true);
+                      setError(null);
                       let urlFoto = null;
                       if (foto) {
                         const ref = `PRM-${Date.now()}`;
@@ -281,11 +287,16 @@ function PermanenteInner() {
                         fd.append("ref", ref);
                         const res = await fetch("/api/upload", { method: "POST", body: fd });
                         const data = await res.json();
-                        urlFoto = data.url;
+                        if (data.url) urlFoto = data.url;
+                        else {
+                          setError("No se pudo subir la factura. Comprueba tu conexión e inténtalo de nuevo.");
+                          setGuardando(false);
+                          return;
+                        }
                       }
 
                       // 1) Registro en historial (igual que antes)
-                      const { error } = await supabase.from("Registros").insert({
+                      const { error: errInsert } = await supabase.from("Registros").insert({
                         tipo: "permanente",
                         comunidad: comunidadCompleta,
                         area, espacio, persona: miembro,
@@ -299,8 +310,8 @@ function PermanenteInner() {
                         fecha_creacion: new Date().toISOString(),
                       });
 
-                      if (error) {
-                        console.error(error);
+                      if (errInsert) {
+                        setError("No se pudo guardar el registro. Inténtalo de nuevo.");
                         setGuardando(false);
                         return;
                       }
@@ -311,7 +322,11 @@ function PermanenteInner() {
                           .from("PermanentesInventario")
                           .update({ activo: false, fecha_baja: new Date().toISOString() })
                           .eq("id", objetoSeleccionado.id);
-                        if (errorBaja) console.error(errorBaja);
+                        if (errorBaja) {
+                          setError("No se pudo archivar el objeto anterior. Revísalo en Maestras.");
+                          setGuardando(false);
+                          return;
+                        }
                       }
 
                       // 3) El objeto nuevo se da de alta en la tabla maestra
@@ -323,7 +338,11 @@ function PermanenteInner() {
                         precio: nuevoPrecio ? parseFloat(nuevoPrecio) : null,
                         activo: true,
                       });
-                      if (errorAlta) console.error(errorAlta);
+                      if (errorAlta) {
+                        setError("El registro se guardó, pero no se pudo dar de alta en el inventario. Revísalo en Maestras.");
+                        setGuardando(false);
+                        return;
+                      }
 
                       setGuardando(false);
                       setPaso(4);

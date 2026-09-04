@@ -16,6 +16,7 @@ type Campana = {
   fecha_instancia: string;
   fecha_creacion: string;
   protocolo: { pasos: string[]; materiales: string[] } | null;
+  color: string;
 };
 
 type Comunidad = {
@@ -56,6 +57,17 @@ function CampanasInner() {
   const [vista, setVista] = useState<"lista" | "detalle" | "crear">("lista");
   const [campanaSeleccionada, setCampanaSeleccionada] = useState<Campana | null>(null);
 
+  // Si campanaSeleccionada apunta a una campaña que ya está cargada en `campanas`
+  // (por ejemplo tras el auto-avance de instancia), la sustituimos por la versión
+  // fresca en vez de dejar la app enseñando datos viejos de cuando se abrió.
+  useEffect(() => {
+    if (!campanaSeleccionada) return;
+    const fresca = campanas.find((c) => c.id === campanaSeleccionada.id);
+    if (fresca && fresca.fecha_instancia !== campanaSeleccionada.fecha_instancia) {
+      setCampanaSeleccionada(fresca);
+    }
+  }, [campanas, campanaSeleccionada]);
+
   // Modal completar
   const [modalTarget, setModalTarget] = useState<{ comunidad: string; area: string } | null>(null);
   const [modalMiembro, setModalMiembro] = useState("");
@@ -64,6 +76,7 @@ function CampanasInner() {
   const [modalComentario, setModalComentario] = useState("");
   const [modalPasos, setModalPasos] = useState<boolean[]>([]);
   const [guardandoModal, setGuardandoModal] = useState(false);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
 
   // Form crear
   const [nombre, setNombre] = useState("");
@@ -72,11 +85,14 @@ function CampanasInner() {
   const [frecuenciaDias, setFrecuenciaDias] = useState(7);
   const [aplicaA, setAplicaA] = useState("pisos");
   const [fechaInicio, setFechaInicio] = useState("");
+  const [colorCampana, setColorCampana] = useState("#639922");
   const [protocolo, setProtocolo] = useState<{ pasos: string[]; materiales: string[] } | null>(null);
   const [cargandoIA, setCargandoIA] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [errorCrear, setErrorCrear] = useState<string | null>(null);
 
   const CATEGORIAS = ["Albañilería", "Carpintería", "Fontanería", "Limpieza", "Electricidad"];
+  const COLORES_CAMPANA = ["#639922", "#378ADD", "#E8614A", "#EF9F27", "#8B5CF6", "#EC4899", "#0D9488", "#B45309"];
   const hoy = new Date();
 
   const cargar = async () => {
@@ -107,10 +123,12 @@ function CampanasInner() {
         if (todosHechos) {
             const nuevaFecha = new Date(campana.fecha_instancia);
             nuevaFecha.setDate(nuevaFecha.getDate() + campana.frecuencia_dias);
-            await supabase.from("campanas").update({
-            fecha_instancia: nuevaFecha.toISOString().split("T")[0],
+            const nuevaFechaAlineada = getLunes(nuevaFecha);
+            const { error: errAvance } = await supabase.from("campanas").update({
+            fecha_instancia: nuevaFechaAlineada.toISOString().split("T")[0],
             completada: true,
             }).eq("id", campana.id);
+            if (errAvance) console.error("No se pudo avanzar la instancia de campaña:", errAvance);
         }
         }
     };
@@ -159,13 +177,17 @@ function CampanasInner() {
     return targets;
   };
 
+  // Cuenta como parte de la instancia actual cualquier registro creado desde
+  // el lunes de fecha_instancia en adelante, SIN límite de domingo. fecha_instancia
+  // solo avanza cuando la instancia está completa del todo, así que una tarea
+  // completada tarde (atrasada) sigue perteneciendo a esta misma instancia hasta
+  // que avance — poner un límite de domingo hacía que esas tareas tardías nunca
+  // se contaran como hechas, aunque el registro se guardara bien en Supabase.
   const getRegistrosInstancia = (campana: Campana) => {
     const lunes = getLunes(new Date(campana.fecha_instancia));
-    const domingo = getDomingo(new Date(campana.fecha_instancia));
     return registros.filter(r =>
       r.campana_id === campana.id &&
-      new Date(r.fecha_creacion) >= lunes &&
-      new Date(r.fecha_creacion) <= domingo
+      new Date(r.fecha_creacion) >= lunes
     );
   };
 
@@ -203,11 +225,12 @@ function CampanasInner() {
 
   const getSemanasFuturas = (campana: Campana, cantidad = 6) => {
     const semanas = [];
-    let fecha = new Date(campana.fecha_instancia);
+    let fecha = getLunes(new Date(campana.fecha_instancia));
     for (let i = 0; i < cantidad; i++) {
       semanas.push(new Date(fecha));
       fecha = new Date(fecha);
       fecha.setDate(fecha.getDate() + campana.frecuencia_dias);
+      fecha = getLunes(fecha);
     }
     return semanas;
   };
@@ -220,6 +243,7 @@ function CampanasInner() {
     setModalFacturas([]);
     setModalComentario("");
     setModalPasos(campana.protocolo?.pasos ? new Array(campana.protocolo.pasos.length).fill(false) : []);
+    setErrorModal(null);
   };
 
   // Guardar completar
@@ -237,6 +261,11 @@ function CampanasInner() {
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.url) urlsFactura.push(data.url);
+      else {
+        setErrorModal("No se pudo subir la factura. Comprueba tu conexión e inténtalo de nuevo.");
+        setGuardandoModal(false);
+        return;
+      }
     }
 
     for (const f of modalFotos) {
@@ -245,12 +274,17 @@ function CampanasInner() {
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.url) urlsFotos.push(data.url);
+      else {
+        setErrorModal("No se pudo subir la foto. Comprueba tu conexión e inténtalo de nuevo.");
+        setGuardandoModal(false);
+        return;
+      }
     }
 
     const proximaFecha = new Date(campanaSeleccionada.fecha_instancia);
     proximaFecha.setDate(proximaFecha.getDate() + campanaSeleccionada.frecuencia_dias);
 
-    await supabase.from("Registros").insert({
+    const { error: errCompletar } = await supabase.from("Registros").insert({
       tipo: "mantenimiento",
       comunidad: `${modalTarget.comunidad} · ${modalTarget.area}`,
       area: modalTarget.area,
@@ -268,6 +302,13 @@ function CampanasInner() {
       fecha_creacion: new Date().toISOString(),
     });
 
+    if (errCompletar) {
+      setErrorModal("No se pudo guardar. Inténtalo de nuevo.");
+      setGuardandoModal(false);
+      return;
+    }
+
+    setErrorModal(null);
     await cargar();
     setModalTarget(null);
     setGuardandoModal(false);
@@ -276,6 +317,7 @@ function CampanasInner() {
   const crearCampana = async () => {
     if (!nombre || !fechaInicio) return;
     setGuardando(true);
+    setErrorCrear(null);
     const { error } = await supabase.from("campanas").insert({
       nombre, categoria, descripcion,
       frecuencia_dias: frecuenciaDias,
@@ -284,13 +326,17 @@ function CampanasInner() {
       fecha_inicio: fechaInicio,
       fecha_instancia: fechaInicio,
       protocolo: protocolo || null,
+      color: colorCampana,
     });
     if (!error) {
       await cargar();
       setNombre(""); setCategoria(""); setDescripcion("");
       setFrecuenciaDias(7); setAplicaA("pisos"); setFechaInicio("");
+      setColorCampana("#639922");
       setProtocolo(null);
       setVista("lista");
+    } else {
+      setErrorCrear("No se pudo crear la campaña. Inténtalo de nuevo.");
     }
     setGuardando(false);
   };
@@ -391,6 +437,17 @@ function CampanasInner() {
                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Fecha de inicio <span className="text-[#E8614A]">*</span></label>
                 <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-[#E8614A]" />
               </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">Color en el calendario</label>
+                <div className="flex flex-wrap gap-2">
+                  {COLORES_CAMPANA.map((c) => (
+                    <button key={c} onClick={() => setColorCampana(c)} style={{ backgroundColor: c }} className={`w-8 h-8 rounded-full transition-all ${colorCampana === c ? "ring-2 ring-offset-2 ring-gray-400" : "hover:scale-110"}`} />
+                  ))}
+                </div>
+              </div>
+              {errorCrear && (
+                <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{errorCrear}</div>
+              )}
               <button onClick={crearCampana} disabled={!nombre || !fechaInicio || guardando} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold hover:bg-[#C44A35] transition-all disabled:opacity-40">
                 {guardando ? "Guardando..." : "Crear campaña"}
               </button>
@@ -510,6 +567,10 @@ function CampanasInner() {
                     <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1 block">Comentario para el siguiente</label>
                     <textarea value={modalComentario} onChange={(e) => setModalComentario(e.target.value)} rows={2} placeholder="Algo a tener en cuenta la próxima vez…" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-[#E8614A]" />
                   </div>
+
+                  {errorModal && (
+                    <div className="bg-[#FCEBEB] border border-[#F09595] text-[#A32D2D] text-xs rounded-xl px-4 py-2">{errorModal}</div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={() => setModalTarget(null)} className="py-3 bg-gray-50 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
@@ -643,6 +704,7 @@ function CampanasInner() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <div className="flex items-center gap-2 mb-0.5">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.color || "#639922" }} />
                         <p className="text-sm font-semibold text-gray-900">{c.nombre}</p>
                         {atrasada ? (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#A32D2D] font-medium">⏰ Atrasada</span>

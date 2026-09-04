@@ -50,6 +50,7 @@ function CalendarioInner() {
     setCargando(true);
     const primerDia = `${anio}-${String(mes + 1).padStart(2, "0")}-01`;
     const ultimoDia = `${anio}-${String(mes + 1).padStart(2, "0")}-${new Date(anio, mes + 1, 0).getDate()}`;
+    const hoyStr = new Date().toISOString().split("T")[0];
     const [{ data: pend }, { data: res }, { data: miem }, { data: rev }, { data: c }] = await Promise.all([
       supabase.from("alertas").select("*").eq("resuelta", false).gte("fecha_alerta", primerDia).lte("fecha_alerta", ultimoDia).order("fecha_alerta", { ascending: true }),
       supabase.from("alertas").select("*").eq("resuelta", true).gte("fecha_alerta", primerDia).lte("fecha_alerta", ultimoDia).order("fecha_alerta", { ascending: true }),
@@ -57,7 +58,8 @@ function CalendarioInner() {
       supabase.from("Registros").select("*").is("campana_id", null).gte("fecha_revision", primerDia).lte("fecha_revision", ultimoDia).order("fecha_revision", { ascending: true }),
       supabase.from("campanas").select("*").eq("activa", true),
     ]);
-    if (pend) setAlertas(pend);
+    // Una alerta pendiente está vencida si su fecha ya pasó y sigue sin resolver.
+    if (pend) setAlertas(pend.map((a) => ({ ...a, vencida: !!a.fecha_alerta && a.fecha_alerta < hoyStr })));
     if (res) setAlertasResueltas(res);
     if (miem) setMiembros(miem);
     if (rev) setRevisiones(rev);
@@ -168,8 +170,8 @@ function CalendarioInner() {
                 <div className="mb-1">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">📋 Campañas</p>
                   {camps.map((c) => (
-                    <button key={c.id} onClick={() => router.push(`/campanas?id=${c.id}`)} className="w-full text-left border rounded-xl px-4 py-3 bg-[#EAF3DE] border-[#A8D57A] hover:border-[#639922] transition-all mb-2">
-                      <p className="text-xs text-[#3B6D11] font-medium mb-1">📋 Campaña semanal</p>
+                    <button key={c.id} onClick={() => router.push(`/campanas?id=${c.id}`)} className="w-full text-left border rounded-xl px-4 py-3 bg-gray-50 border-gray-200 hover:border-gray-300 transition-all mb-2" style={{ borderLeftColor: c.color || "#639922", borderLeftWidth: 3 }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: c.color || "#3B6D11" }}>📋 Campaña semanal</p>
                       <p className="text-sm font-medium text-gray-800">{c.nombre}</p>
                       <p className="text-xs text-gray-400">{c.categoria} · Ver desglose →</p>
                     </button>
@@ -206,7 +208,10 @@ function CalendarioInner() {
               {creandoEnDia ? (
                 <div className="space-y-2 pt-2">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">¿Qué quieres crear?</p>
-                  <button onClick={() => router.push(`/alerta`)} className="w-full py-3 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold">🔔 Crear alerta para este día</button>
+                  <button onClick={() => {
+                    const diaStr = `${anio}-${String(mes + 1).padStart(2, "0")}-${String(diaSeleccionado).padStart(2, "0")}`;
+                    router.push(`/inicio?fecha=${diaStr}`);
+                  }} className="w-full py-3 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold">🔔 Crear alerta para este día</button>
                   <button onClick={() => router.push("/inicio")} className="w-full py-3 bg-[#E8614A] text-white rounded-xl text-sm font-semibold">+ Crear registro</button>
                   <button onClick={() => setCreandoEnDia(false)} className="w-full py-3 bg-gray-50 border border-gray-200 text-gray-500 rounded-xl text-sm">Cancelar</button>
                 </div>
@@ -266,13 +271,14 @@ function CalendarioInner() {
 
                 return (
                   <button key={dia} onClick={() => setDiaSeleccionado(dia)}
+                    style={!esHoyDia && !tieneVencidas && !tienePendientes && !tieneResueltas && !tieneRevisiones && tieneCampana ? { backgroundColor: `${camps[0].color || "#639922"}22`, color: camps[0].color || "#3B6D11" } : undefined}
                     className={`flex flex-col items-center py-2.5 rounded-xl transition-all ${
                       esHoyDia ? "bg-[#E8614A] text-white shadow-sm" :
                       tieneVencidas ? "bg-[#FCEBEB] text-[#A32D2D]" :
                       tienePendientes ? "bg-[#FDF0ED] text-[#C44A35] hover:bg-[#F5C4BB]" :
                       tieneResueltas ? "bg-[#E1F5EE] text-[#085041]" :
                       tieneRevisiones ? "bg-[#FDF0ED] text-[#C44A35] hover:bg-[#F5C4BB]" :
-                      tieneCampana ? "bg-[#EAF3DE] text-[#3B6D11] hover:bg-[#D4EDBA]" :
+                      tieneCampana ? "hover:opacity-80" :
                       "text-gray-400 hover:bg-gray-50"
                     }`}>
                     <span className="text-sm font-medium">{dia}</span>
@@ -281,7 +287,9 @@ function CalendarioInner() {
                         {tienePendientes && <div className={`w-1.5 h-1.5 rounded-full ${tieneVencidas ? "bg-[#A32D2D]" : "bg-[#E8614A]"}`} />}
                         {tieneResueltas && <div className="w-1.5 h-1.5 rounded-full bg-[#1D9E75]" />}
                         {tieneRevisiones && <div className="w-1.5 h-1.5 rounded-full bg-[#C44A35]" />}
-                        {tieneCampana && <div className="w-1.5 h-1.5 rounded-full bg-[#639922]" />}
+                        {camps.map((c) => (
+                          <div key={c.id} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: c.color || "#639922" }} />
+                        ))}
                       </div>
                     )}
                   </button>
@@ -293,16 +301,28 @@ function CalendarioInner() {
               <span><span className="inline-block w-2 h-2 rounded-full bg-[#1D9E75] mr-1.5"></span>Resuelto</span>
               <span><span className="inline-block w-2 h-2 rounded-full bg-[#C44A35] mr-1.5"></span>Revisión</span>
               <span><span className="inline-block w-2 h-2 rounded-full bg-[#A32D2D] mr-1.5"></span>Vencida</span>
-              <span><span className="inline-block w-2 h-2 rounded-full bg-[#639922] mr-1.5"></span>Campaña</span>
+              <span><span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: "conic-gradient(#639922 0 33%, #378ADD 33% 66%, #E8614A 66% 100%)" }}></span>Campaña (color propio · varios puntos si coinciden)</span>
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">Este mes</p>
-            {alertas.length === 0 && revisiones.length === 0 ? (
+            {alertas.length === 0 && revisiones.length === 0 && campanas.length === 0 ? (
               <p className="text-center text-gray-400 text-sm py-8">¡Todo al día! 🎉</p>
             ) : (
               <div className="space-y-2">
+                {campanas.slice(0, 3).map((c) => (
+                  <button key={c.id} onClick={() => router.push(`/campanas?id=${c.id}`)} className="w-full text-left border rounded-xl px-4 py-3 bg-gray-50 border-gray-200 hover:border-gray-300 transition-all" style={{ borderLeftColor: c.color || "#639922", borderLeftWidth: 3 }}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-medium mb-0.5" style={{ color: c.color || "#3B6D11" }}>📋 Campaña semanal</p>
+                        <p className="text-sm font-medium text-gray-800">{c.nombre}</p>
+                        <p className="text-xs text-gray-400">{c.categoria}</p>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[#E1F5EE] text-[#085041] font-medium">Ver →</span>
+                    </div>
+                  </button>
+                ))}
                 {revisiones.slice(0, 3).map((r) => (
                   <button key={r.id} onClick={() => { setItemSeleccionado(r); setTipoSeleccionado("registro"); }} className="w-full text-left border rounded-xl px-4 py-3 bg-[#FDF0ED] border-[#F5C4BB] hover:border-[#E8614A] transition-all">
                     <div className="flex justify-between items-start">

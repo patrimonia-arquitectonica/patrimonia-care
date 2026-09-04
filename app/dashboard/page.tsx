@@ -92,6 +92,8 @@ export default function Dashboard() {
   const alertasHoy = alertasPorDia(hoy);
   const totalPendientes = alertas.length;
   const altaUrgencia = alertas.filter(a => a.urgencia === "Alta").length;
+  const hoyStr = hoy.toISOString().split("T")[0];
+  const alertasVencidas = alertas.filter(a => a.fecha_alerta && a.fecha_alerta < hoyStr);
 
   const badgeUrgencia = (urgencia: string | null) => {
     if (urgencia === "Alta") return <span className="text-xs px-2 py-0.5 rounded-full bg-[#FCEBEB] text-[#A32D2D] font-medium">Alta</span>;
@@ -142,7 +144,10 @@ export default function Dashboard() {
             <h1 className="text-xl font-semibold text-gray-900">
               {hoy.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
             </h1>
-            <p className="text-sm text-gray-400">{alertasHoy.length} alertas hoy · {registros.filter(r => r.fecha_revision === hoy.toISOString().split("T")[0]).length} revisiones hoy</p>
+            <p className="text-sm text-gray-400">
+              {alertasHoy.length} alertas hoy · {registros.filter(r => r.fecha_revision === hoy.toISOString().split("T")[0]).length} revisiones hoy
+              {alertasVencidas.length > 0 && <span className="text-[#A32D2D] font-medium"> · {alertasVencidas.length} vencida{alertasVencidas.length !== 1 ? "s" : ""} ⚠️</span>}
+            </p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => router.push("/inicio")} className="px-4 py-2 bg-[#FAEEDA] border border-[#EF9F27] text-[#854F0B] rounded-xl text-sm font-semibold">
@@ -250,16 +255,19 @@ export default function Dashboard() {
               <p className="text-center text-gray-400 text-sm py-6">¡Todo al día! 🎉</p>
             ) : (
               <div className="space-y-2">
-                {alertas.slice(0, 4).map((a) => (
-                  <div key={a.id} onClick={() => { setItemSeleccionado(a); setTipoSeleccionado("alerta"); }} className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-[#FDF0ED] cursor-pointer transition-all">
+                {alertas.slice(0, 4).map((a) => {
+                  const vencida = !!a.fecha_alerta && a.fecha_alerta < hoyStr;
+                  return (
+                  <div key={a.id} onClick={() => { setItemSeleccionado(a); setTipoSeleccionado("alerta"); }} className={`flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-[#FDF0ED] cursor-pointer transition-all ${vencida ? "bg-[#FCEBEB]" : ""}`}>
                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${a.urgencia === "Alta" ? "bg-[#E24B4A]" : a.urgencia === "Media" ? "bg-[#EF9F27]" : "bg-[#639922]"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{a.descripcion || "Sin descripción"}</p>
-                      <p className="text-xs text-gray-400">{a.comunidad} · {a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleDateString("es-ES") : "Sin fecha"}</p>
+                      <p className="text-xs text-gray-400">{a.comunidad} · {a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleDateString("es-ES") : "Sin fecha"}{vencida ? " · ⚠️ vencida" : ""}</p>
                     </div>
                     {badgeUrgencia(a.urgencia)}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -2,6 +2,59 @@
 import { useSearchParams } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { Suspense, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+
+const getLunes = (fecha: Date) => {
+  const d = new Date(fecha);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+// Revisa las campañas activas y avanza fecha_instancia a la semana siguiente
+// si la instancia actual ya está completa del todo. Antes esto solo vivía en
+// app/campanas/page.tsx, así que si nadie abría esa página, el resto de la
+// app (Calendario, Dashboard...) se quedaba viendo la semana vieja aunque la
+// campaña ya estuviera terminada. Al ponerlo aquí, corre en cualquier página.
+const revisarAvanceCampanas = async () => {
+  const [{ data: campanas }, { data: comunidades }, { data: registros }] = await Promise.all([
+    supabase.from("campanas").select("*").eq("activa", true),
+    supabase.from("comunidades").select("*"),
+    supabase.from("Registros").select("id, campana_id, area, comunidad, estado, fecha_creacion").not("campana_id", "is", null),
+  ]);
+  if (!campanas || !comunidades || !registros) return;
+
+  for (const campana of campanas) {
+    const targets: { comunidad: string; area: string }[] = [];
+    for (const com of comunidades) {
+      if (campana.aplica_a === "pisos" || campana.aplica_a === "todo") {
+        for (const piso of (com.pisos || [])) targets.push({ comunidad: com.nombre, area: piso });
+      }
+      if ((campana.aplica_a === "zonas_comunes" || campana.aplica_a === "todo") && com.zonas_comunes) {
+        targets.push({ comunidad: com.nombre, area: "Zonas comunes" });
+      }
+    }
+    const lunes = getLunes(new Date(campana.fecha_instancia));
+    const regsInstancia = registros.filter((r) => r.campana_id === campana.id && new Date(r.fecha_creacion) >= lunes);
+    const todosHechos = targets.length > 0 && targets.every((t) =>
+      regsInstancia.some((r) => r.area === t.area && r.comunidad?.includes(t.comunidad) && (r.estado === "Resuelto" || r.estado === "Hecho"))
+    );
+    if (todosHechos) {
+      const nuevaFecha = new Date(campana.fecha_instancia);
+      nuevaFecha.setDate(nuevaFecha.getDate() + campana.frecuencia_dias);
+      // Realineamos siempre al lunes: si frecuencia_dias no es múltiplo de 7
+      // (30 días, por ejemplo), sumar a secas va desplazando la instancia poco
+      // a poco fuera del lunes, y cada pantalla termina "corrigiéndolo" a su manera.
+      const nuevaFechaAlineada = getLunes(nuevaFecha);
+      await supabase.from("campanas").update({
+        fecha_instancia: nuevaFechaAlineada.toISOString().split("T")[0],
+        completada: true,
+      }).eq("id", campana.id);
+    }
+  }
+};
 
 function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
@@ -11,6 +64,7 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const guardado = localStorage.getItem("miembro") || "";
     setMiembroLocal(guardado);
+    revisarAvanceCampanas();
   }, []);
 
   const miembro = searchParams.get("miembro") || miembroLocal;
