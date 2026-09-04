@@ -515,6 +515,16 @@ function CampanasInner() {
                           </button>
                         ))}
                       </div>
+                      {campanaSeleccionada.protocolo.materiales?.length > 0 && (
+                        <div className="mt-3 bg-[#FAEEDA] border border-[#EF9F27] rounded-xl p-3">
+                          <p className="text-xs font-semibold text-[#854F0B] uppercase tracking-widest mb-1.5">🧰 Materiales a llevar</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {campanaSeleccionada.protocolo.materiales.map((m, i) => (
+                              <span key={i} className="text-xs bg-white border border-[#EF9F27] text-[#854F0B] rounded-full px-2.5 py-1">{m}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

@@ -319,6 +319,7 @@ function MantenimientoInner() {
                   fecha_creacion: new Date().toISOString(),
                   ref_padre: ref_padre || null,
                   ref_alerta: ref_alerta || null,
+                  protocolo: protocolo || null,
                 });
 
                 if (!errInsert && resuelve) {

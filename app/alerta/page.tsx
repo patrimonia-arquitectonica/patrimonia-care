@@ -147,13 +147,12 @@ function AlertaInner() {
               <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2 block">Urgencia</label>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Alta", sub: "cada día", color: "bg-[#FCEBEB] border-[#E24B4A] text-[#A32D2D]" },
-                  { label: "Media", sub: "cada 3 días", color: "bg-[#FAEEDA] border-[#EF9F27] text-[#854F0B]" },
-                  { label: "Leve", sub: "1 vez/semana", color: "bg-[#EAF3DE] border-[#639922] text-[#3B6D11]" },
+                  { label: "Alta", color: "bg-[#FCEBEB] border-[#E24B4A] text-[#A32D2D]" },
+                  { label: "Media", color: "bg-[#FAEEDA] border-[#EF9F27] text-[#854F0B]" },
+                  { label: "Leve", color: "bg-[#EAF3DE] border-[#639922] text-[#3B6D11]" },
                 ].map((u) => (
-                  <button key={u.label} onClick={() => setUrgencia(u.label)} className={`py-4 rounded-xl text-sm font-medium border transition-all flex flex-col items-center gap-1 ${urgencia === u.label ? u.color : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
+                  <button key={u.label} onClick={() => setUrgencia(u.label)} className={`py-4 rounded-xl text-sm font-medium border transition-all flex items-center justify-center ${urgencia === u.label ? u.color : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"}`}>
                     <span className="font-semibold">{u.label}</span>
-                    <span className="text-xs font-normal">{u.sub}</span>
                   </button>
                 ))}
               </div>

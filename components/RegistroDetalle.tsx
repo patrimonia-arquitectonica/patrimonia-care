@@ -24,6 +24,9 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
   const [editandoDescripcion, setEditandoDescripcion] = useState(false);
   const [descripcionActual, setDescripcionActual] = useState(r.descripcion || "");
   const [descripcionEditada, setDescripcionEditada] = useState("");
+  const [pasosProtocolo, setPasosProtocolo] = useState<boolean[]>(
+    Array.isArray(r.protocolo?.pasos) ? new Array(r.protocolo.pasos.length).fill(false) : []
+  );
 
   const fotosArreglo: string[] = Array.isArray(r.fotos_arreglo) ? r.fotos_arreglo : [];
   const esImagen = (url: string) => /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
@@ -169,6 +172,36 @@ export default function RegistroDetalle({ registro: r, miembros = [], onVolver, 
                   </div>
                 ) : (
                   <p className="text-sm text-gray-700">{descripcionActual}</p>
+                )}
+              </div>
+            )}
+
+            {!esResuelto && r.protocolo?.pasos?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">📋 Protocolo</p>
+                <div className="space-y-2">
+                  {r.protocolo.pasos.map((paso: string, i: number) => (
+                    <button key={i} onClick={() => {
+                      const nuevo = [...pasosProtocolo];
+                      nuevo[i] = !nuevo[i];
+                      setPasosProtocolo(nuevo);
+                    }} className={`w-full flex items-start gap-3 text-left p-2.5 rounded-xl transition-all ${pasosProtocolo[i] ? "bg-[#E1F5EE]" : "bg-gray-50 border border-gray-100"}`}>
+                      <span className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 flex items-center justify-center text-xs border ${pasosProtocolo[i] ? "bg-[#1D9E75] border-[#1D9E75] text-white" : "border-gray-300"}`}>
+                        {pasosProtocolo[i] ? "✓" : ""}
+                      </span>
+                      <span className={`text-xs ${pasosProtocolo[i] ? "line-through text-gray-400" : "text-gray-700"}`}>{paso}</span>
+                    </button>
+                  ))}
+                </div>
+                {r.protocolo.materiales?.length > 0 && (
+                  <div className="mt-3 bg-[#FAEEDA] border border-[#EF9F27] rounded-xl p-3">
+                    <p className="text-xs font-semibold text-[#854F0B] uppercase tracking-widest mb-1.5">🧰 Materiales a llevar</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {r.protocolo.materiales.map((m: string, i: number) => (
+                        <span key={i} className="text-xs bg-white border border-[#EF9F27] text-[#854F0B] rounded-full px-2.5 py-1">{m}</span>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
